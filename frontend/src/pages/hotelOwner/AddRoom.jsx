@@ -1,0 +1,141 @@
+import React, { useState } from "react";
+import Title from "../../components/Title";
+import { assets } from "../../assets/assets";
+
+const AddRoom = () => {
+  const [images, setImages] = useState({
+    1: null,
+    2: null,
+    3: null,
+    4: null,
+  });
+
+  const [inputs, setInputs] = useState({
+    roomType: "",
+    pricePerNight: "",
+    amenities: {
+      "Free wifi": false,
+      "Free Breakfast": false,
+      "Room Service": false,
+      "Mountain View": false,
+      "Pool Access": false,
+    },
+  });
+
+  return (
+    <form className="pb-12">
+      {/* Page Header */}
+      <Title
+        align="left"
+        font="outfit"
+        title="Add Room"
+        subtitle="Fill in the details carefully to ensure accurate room listings and a smooth user booking experience."
+      />
+
+      {/* Images */}
+      <p className="text-gray-800 mt-10 font-medium">Room Images</p>
+
+      <div className="grid grid-cols-2 sm:flex gap-5 mt-3 flex-wrap">
+        {Object.keys(images).map((key) => (
+          <label key={key} htmlFor={`roomImage${key}`} className="cursor-pointer">
+            <div className="w-32 h-32 border border-gray-300 rounded-xl overflow-hidden bg-gray-50 shadow-sm hover:shadow-md transition-all flex items-center justify-center">
+              <img
+                src={
+                  images[key]
+                    ? URL.createObjectURL(images[key])
+                    : assets.uploadArea
+                }
+                alt="upload"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              id={`roomImage${key}`}
+              hidden
+              onChange={(e) =>
+                setImages((prev) => ({ ...prev, [key]: e.target.files[0] }))
+              }
+            />
+          </label>
+        ))}
+      </div>
+
+      {/* Room Type + Price */}
+      <div className="flex max-sm:flex-col gap-6 mt-8 w-full">
+        {/* Room Type */}
+        <div className="flex-1 min-w-[200px]">
+          <p className="text-gray-800 font-medium mb-1">Room Type</p>
+          <select
+            value={inputs.roomType}
+            onChange={(e) =>
+              setInputs({ ...inputs, roomType: e.target.value })
+            }
+            className="border border-gray-300 rounded-lg px-3 py-2 w-full shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"
+          >
+            <option value="">Select Room Type</option>
+            <option value="Single Bed">Single Bed</option>
+            <option value="Double Bed">Double Bed</option>
+            <option value="Luxury Room">Luxury Room</option>
+            <option value="Family Suite">Family Suite</option>
+          </select>
+        </div>
+
+        {/* Price */}
+        <div>
+          <p className="text-gray-800 font-medium mb-1">
+            ₹ Price <span className="text-xs">/night</span>
+          </p>
+          <input
+            type="number"
+            placeholder="0"
+            value={inputs.pricePerNight}
+            onChange={(e) =>
+              setInputs({ ...inputs, pricePerNight: e.target.value })
+            }
+            className="border border-gray-300 rounded-lg px-3 py-2 w-28 shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* Amenities */}
+      <p className="text-gray-800 font-medium mt-8">Amenities</p>
+
+      <div className="grid grid-cols-2 gap-3 mt-3 text-gray-700 max-w-sm">
+        {Object.keys(inputs.amenities).map((amenity, index) => (
+          <label
+            key={index}
+            htmlFor={`amenity-${index}`}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              id={`amenity-${index}`}
+              checked={inputs.amenities[amenity]}
+              onChange={() =>
+                setInputs({
+                  ...inputs,
+                  amenities: {
+                    ...inputs.amenities,
+                    [amenity]: !inputs.amenities[amenity],
+                  },
+                })
+              }
+              className="h-4 w-4 accent-blue-600"
+            />
+            <span>{amenity}</span>
+          </label>
+        ))}
+      </div>
+
+      {/* Button */}
+      <button className="mt-10 bg-blue-600 text-white font-medium px-8 py-2 rounded-lg shadow-md hover:bg-blue-700 transition-all">
+        Add Room
+      </button>
+    </form>
+  );
+};
+
+export default AddRoom;
