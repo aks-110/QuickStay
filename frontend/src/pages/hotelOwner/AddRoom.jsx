@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 import Title from "../../components/Title";
 import { assets } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
+import toast from "react-hot-toast";
 
 const AddRoom = () => {
+  const { axios, getToken } = useAppContext();
+
   const [images, setImages] = useState({
     1: null,
     2: null,
@@ -22,8 +26,70 @@ const AddRoom = () => {
     },
   });
 
+  const [loading, setLoading] = useState(false);
+
+  const onSubmitHandler = async (e) => {
+    e.preventDefault();
+    if (
+      !inputs.roomType ||
+      !inputs.pricePerNight ||
+      !Object.values(images).some((image) => image)
+    ) {
+      toast.error("All fields are required");
+      return;
+    }
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("roomType", inputs.roomType);
+      formData.append("pricePerNight", inputs.pricePerNight);
+
+      const amenities = Object.keys(inputs.amenities).filter(
+        (amenity) => inputs.amenities[amenity]
+      );
+      formData.append("amenities", JSON.stringify(amenities));
+
+      Object.keys(images).forEach((key) => {
+        if (images[key]) {
+          formData.append(`images[${key}]`, images[key]);
+        }
+      });
+
+      const { data } = await axios.post("/api/rooms", formData, {
+        headers: { authorization: `Bearer ${await getToken()}` },
+      });
+      if (data.success) {
+        toast.success(data.message);
+        setInputs({
+          roomType: "",
+          pricePerNight: "",
+          amenities: {
+            "Free wifi": false,
+            "Free Breakfast": false,
+            "Room Service": false,
+            "Mountain View": false,
+            "Pool Access": false,
+          },
+        });
+
+        setImages({
+          1: null,
+          2: null,
+          3: null,
+          4: null,
+        });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <form className="pb-12">
+    <form className="pb-12" onSubmit={onSubmitHandler}>
       {/* Page Header */}
       <Title
         align="left"
@@ -37,7 +103,11 @@ const AddRoom = () => {
 
       <div className="grid grid-cols-2 sm:flex gap-5 mt-3 flex-wrap">
         {Object.keys(images).map((key) => (
-          <label key={key} htmlFor={`roomImage${key}`} className="cursor-pointer">
+          <label
+            key={key}
+            htmlFor={`roomImage${key}`}
+            className="cursor-pointer"
+          >
             <div className="w-32 h-32 border border-gray-300 rounded-xl overflow-hidden bg-gray-50 shadow-sm hover:shadow-md transition-all flex items-center justify-center">
               <img
                 src={
@@ -70,9 +140,7 @@ const AddRoom = () => {
           <p className="text-gray-800 font-medium mb-1">Room Type</p>
           <select
             value={inputs.roomType}
-            onChange={(e) =>
-              setInputs({ ...inputs, roomType: e.target.value })
-            }
+            onChange={(e) => setInputs({ ...inputs, roomType: e.target.value })}
             className="border border-gray-300 rounded-lg px-3 py-2 w-full shadow-sm focus:ring-2 focus:ring-blue-300 focus:outline-none"
           >
             <option value="">Select Room Type</option>
