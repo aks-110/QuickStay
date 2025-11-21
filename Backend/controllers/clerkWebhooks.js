@@ -3,10 +3,8 @@ import { Webhook } from "svix";
 
 const clerkWebhooks = async (req, res) => {
   try {
-    // Create a Svix Webhook
     const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
 
-    // Getting headers
     const headers = {
       "svix-id": req.headers["svix-id"],
       "svix-timestamp": req.headers["svix-timestamp"],
@@ -14,8 +12,6 @@ const clerkWebhooks = async (req, res) => {
     };
 
     await whook.verify(JSON.stringify(req.body), headers);
-
-    // Getting Data from request Body
 
     const { data, type } = req.body;
 
@@ -26,24 +22,16 @@ const clerkWebhooks = async (req, res) => {
       image: data.image_url,
     };
 
-    // switch cases for different Events
-
     switch (type) {
-      case "user.created": {
+      case "user.created":
         await User.create(userData);
         break;
-      }
-
-      case "user.updated": {
+      case "user.updated":
         await User.findByIdAndUpdate(data.id, userData);
         break;
-      }
-
-      case "user.deleted": {
+      case "user.deleted":
         await User.findByIdAndDelete(data.id);
         break;
-      }
-
       default:
         break;
     }

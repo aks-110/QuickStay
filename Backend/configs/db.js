@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
- const connectDB = async () => {
+const connectDB = async () => {
   try {
     if (!process.env.DB_URL) {
       throw new Error("DB_URL is not defined");

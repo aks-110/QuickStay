@@ -1,12 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { assets, cities } from "../assets/assets";
 import { motion } from "framer-motion";
 import { useAppContext } from "../context/AppContext";
-import { useState } from "react";
 import toast from "react-hot-toast";
 
 const HotelReg = () => {
-  const { setShowHotelReg, axios, getToken, setIsOwner } = useAppContext();
+  const { setShowHotelReg, axios, getToken, setIsOwner, fetchUser } = useAppContext();
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -14,22 +13,24 @@ const HotelReg = () => {
   const [city, setCity] = useState("");
 
   const onSubmitHandler = async (event) => {
+    event.preventDefault();
     try {
-      event.preventDefault();
+      const token = await getToken();
       const { data } = await axios.post(
         `/api/hotels`,
         { name, contact, address, city },
-        { headers: { authorization: `Bearer ${await getToken()}` } }
+        { headers: { authorization: `Bearer ${token}` } }
       );
       if (data.success) {
         toast.success(data.message);
         setIsOwner(true);
+        await fetchUser(); // Update context
         setShowHotelReg(false);
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 

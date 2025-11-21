@@ -1,5 +1,4 @@
 import Hotel from "../models/Hotel.js";
-
 import User from "../models/User.js";
 
 export const registerHotel = async (req, res) => {
@@ -7,9 +6,9 @@ export const registerHotel = async (req, res) => {
     const { name, address, contact, city } = req.body;
     const owner = req.user._id;
 
-    const hotel = await Hotel.findOne({ owner });
+    const existingHotel = await Hotel.findOne({ owner });
 
-    if (hotel) {
+    if (existingHotel) {
       return res.json({ success: false, message: "Hotel already registered" });
     }
 

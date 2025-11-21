@@ -1,30 +1,33 @@
-//GET/api/user/
+import User from "../models/User.js";
 
 export const getUserData = async (req, res) => {
   try {
+    // req.user is populated by protect middleware
     const role = req.user.role;
-    const recentSearchCities = req.user.recentSearchCities;
-    res.json({ success: true, role, recentSearchCities });
+    const recentSearchedCities = req.user.recentSearchedCities;
+    res.json({ success: true, role, recentSearchedCities });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };
 
-// store user recent searched cities
-
 export const storeRecentSearchedCities = async (req, res) => {
   try {
-    const { recentSearchCities } = req.body;
-    const user = await req.user;
+    const { recentSearchedCity } = req.body; // Fixed variable name match
+    const user = req.user;
 
-    if (user.recentSearchCities.length < 3) {
-      user.recentSearchedCities.push(recentSearchCities);
-    } else {
-      user.recentSearchedCities.shift();
-      user.recentSearchedCities.push(recentSearchCities);
+    if (!user.recentSearchedCities.includes(recentSearchedCity)) {
+      user.recentSearchedCities.push(recentSearchedCity);
+      
+      // Limit to 3
+      if (user.recentSearchedCities.length > 3) {
+        user.recentSearchedCities.shift();
+      }
+      
+      await user.save();
     }
-    await user.save();
-    res.json({ success: true, message: "cities stored successfully" });
+    
+    res.json({ success: true, message: "City stored successfully" });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
