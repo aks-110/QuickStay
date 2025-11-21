@@ -3,7 +3,7 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Footer from "./components/Footer";
-import Allrooms from "./pages/Allrooms";
+import AllRooms from "./pages/AllRooms";
 import RoomDetails from "./pages/RoomDetails";
 import MyBookings from "./pages/MyBookings";
 import HotelReg from "./components/HotelReg";
@@ -24,10 +24,10 @@ function App() {
   return (
     <div className="relative">
       <Toaster position="top-center" reverseOrder={false} />
-      
+
       {/* Hide Main Navbar on Dashboard */}
       {!isOwnerPath && <Navbar />}
-      
+
       {/* Registration Modal */}
       {showHotelReg && <HotelReg />}
 
@@ -35,7 +35,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/rooms" element={<Allrooms />} />
+          <Route path="/rooms" element={<AllRooms />} />
           <Route path="/rooms/:id" element={<RoomDetails />} />
           <Route path="/my-bookings" element={<MyBookings />} />
 
