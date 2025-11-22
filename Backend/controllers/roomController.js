@@ -5,9 +5,7 @@ import Room from "../models/Room.js";
 export const createRoom = async (req, res) => {
   try {
     const { roomType, pricePerNight, amenities } = req.body;
-    
-    // FIX: Used as a function
-    const { userId } = req.auth();
+    const { userId } = req.auth;
     
     const hotel = await Hotel.findOne({ owner: userId });
 
@@ -59,8 +57,7 @@ export const getRooms = async (req, res) => {
 
 export const getOwnerRooms = async (req, res) => {
   try {
-    // FIX: Used as a function
-    const { userId } = req.auth();
+    const { userId } = req.auth;
     
     const hotelData = await Hotel.findOne({ owner: userId });
 
@@ -74,6 +71,7 @@ export const getOwnerRooms = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
 
 export const toggleRoomAvailability = async (req, res) => {
   try {
@@ -89,3 +87,30 @@ export const toggleRoomAvailability = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+
+export const removeRoom = async (req, res) => {
+    try {
+        const { roomId } = req.body;
+        const { userId } = req.auth; // Get owner ID from Clerk
+
+        const room = await Room.findById(roomId).populate("hotel");
+
+        if(!room) {
+            return res.json({ success: false, message: "Room not found"});
+        }
+
+        // Security Check: Ensure the requester owns the hotel associated with the room
+        if(room.hotel.owner.toString() !== userId) {
+            return res.json({ success: false, message: "Not authorized to delete this room"});
+        }
+
+        await Room.findByIdAndDelete(roomId);
+
+        res.json({ success: true, message: "Room deleted successfully"});
+
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, message: error.message });
+    }
+}
