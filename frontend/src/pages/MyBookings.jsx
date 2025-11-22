@@ -7,7 +7,6 @@ import toast from "react-hot-toast";
 const MyBookings = () => {
   const { axios, getToken } = useAppContext();
   const [bookings, setBookings] = useState([]);
-  // State to track which specific booking is currently processing payment
   const [paymentLoading, setPaymentLoading] = useState(null);
 
   const fetchBookings = async () => {
@@ -28,24 +27,18 @@ const MyBookings = () => {
     fetchBookings();
   }, [axios, getToken]);
 
-  // ⭐ Handle Pay Now Click
+  // Handle Pay Now Click
   const handlePayNow = async (bookingId) => {
+    setPaymentLoading(bookingId);
     try {
-      setPaymentLoading(bookingId); // Show loading only for this button
-      const token = await getToken();
-
-      // Simulate a payment gateway delay (1 second)
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      // Fixed URL to match backend route correction
       const { data } = await axios.post(
-        "/api/bookings/verify",
+        '/api/bookings/stripe-payment',
         { bookingId },
-        { headers: { authorization: `Bearer ${token}` } }
+        { headers: { authorization: `Bearer ${await getToken()}` } }
       );
-
       if (data.success) {
-        toast.success(data.message);
-        fetchBookings(); // Refresh data to update UI to "Paid"
+        window.location.href = data.url;
       } else {
         toast.error(data.message);
       }
@@ -53,6 +46,32 @@ const MyBookings = () => {
       toast.error(error.message || "Payment failed");
     } finally {
       setPaymentLoading(null);
+    }
+  };
+
+  // ⭐ NEW: Handle Cancel Click
+  const handleCancel = async (bookingId) => {
+    if(!confirm("Are you sure you want to cancel this booking? This will permanently remove the record.")) {
+        return;
+    }
+
+    try {
+        const token = await getToken();
+        const { data } = await axios.post(
+            '/api/bookings/cancel',
+            { bookingId },
+            { headers: { authorization: `Bearer ${token}` } }
+        );
+
+        if (data.success) {
+            toast.success(data.message);
+            // Update state locally to remove the booking from UI
+            setBookings((prev) => prev.filter(b => b._id !== bookingId));
+        } else {
+            toast.error(data.message);
+        }
+    } catch (error) {
+        toast.error(error.message);
     }
   };
 
@@ -65,17 +84,19 @@ const MyBookings = () => {
       />
 
       <div className="max-w-6xl mt-10 w-full text-gray-800 bg-white shadow-lg rounded-2xl p-6 border border-gray-200">
-        {/* Header Row (Hidden on mobile) */}
-        <div className="hidden md:grid md:grid-cols-[3fr_2fr_1fr] w-full border-b border-gray-300 font-semibold text-base py-3 text-gray-700">
+        {/* Header Row */}
+        <div className="hidden md:grid md:grid-cols-[3fr_2fr_1.2fr] w-full border-b border-gray-300 font-semibold text-base py-3 text-gray-700">
           <div>Hotels</div>
           <div>Date & Timings</div>
-          <div>Payment</div>
+          <div>Actions & Payment</div>
         </div>
+        
+        {bookings.length === 0 && <p className="text-center py-10 text-gray-500">No bookings found.</p>}
 
         {bookings.map((booking) => (
           <div
             key={booking._id}
-            className="grid grid-cols-1 md:grid-cols-[3fr_2fr_1fr] w-full border-b border-gray-200 py-6 first:border-t bg-white hover:bg-gray-50 transition rounded-xl px-2"
+            className="grid grid-cols-1 md:grid-cols-[3fr_2fr_1.2fr] w-full border-b border-gray-200 py-6 first:border-t bg-white hover:bg-gray-50 transition rounded-xl px-2"
           >
             {/* 1. Hotel Details */}
             <div className="flex flex-col md:flex-row gap-4">
@@ -135,21 +156,31 @@ const MyBookings = () => {
                 </p>
               </div>
 
-              {/* ⭐ PAY NOW BUTTON (Visible only if Unpaid) */}
-              {!booking.isPaid && (
-                <button
-                  onClick={() => handlePayNow(booking._id)}
-                  disabled={paymentLoading === booking._id}
-                  className={`px-5 py-2 text-xs font-medium rounded-full transition-all shadow-md active:scale-95
-                    ${
-                      paymentLoading === booking._id
-                        ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                    }`}
-                >
-                  {paymentLoading === booking._id ? "Processing..." : "Pay Now"}
-                </button>
-              )}
+              <div className="flex flex-col gap-2 w-full max-w-[140px]">
+                  {/* PAY NOW BUTTON (Visible only if Unpaid) */}
+                  {!booking.isPaid && (
+                    <button
+                      onClick={() => handlePayNow(booking._id)}
+                      disabled={paymentLoading === booking._id}
+                      className={`px-5 py-2 text-xs font-medium rounded-full transition-all shadow-md active:scale-95
+                        ${
+                          paymentLoading === booking._id
+                            ? "bg-gray-400 cursor-not-allowed text-white"
+                            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                        }`}
+                    >
+                      {paymentLoading === booking._id ? "Processing..." : "Pay Now"}
+                    </button>
+                  )}
+
+                  {/* CANCEL BUTTON */}
+                  <button
+                    onClick={() => handleCancel(booking._id)}
+                    className="px-5 py-2 text-xs font-medium rounded-full border border-red-500 text-red-600 hover:bg-red-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+              </div>
             </div>
           </div>
         ))}

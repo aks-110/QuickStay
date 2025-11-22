@@ -1,7 +1,8 @@
-import transporter  from "../configs/nodemailer.js";
+import transporter from "../configs/nodemailer.js";
 import Booking from "../models/Booking.js";
 import Hotel from "../models/Hotel.js";
 import Room from "../models/Room.js";
+import stripe from "stripe";
 
 // Helper function
 const checkAvailabilityHelper = async (room, checkInDate, checkOutDate) => {
@@ -82,7 +83,7 @@ export const createBooking = async (req, res) => {
       paymentMethod: paymentMethod || "Pay At Hotel",
     });
 
-    // 4. Send Email (Safe Mode - won't crash if email fails)
+    // 4. Send Email
     try {
       if (req.user.email) {
         const mailOptions = {
@@ -100,7 +101,9 @@ export const createBooking = async (req, res) => {
             <li><strong> Check-in Date: </strong> ${checkIn.toDateString()}</li>
             <li><strong> Check-out Date: </strong> ${checkOut.toDateString()}</li>
             <li><strong> Total Price: </strong> ₹${totalPrice}</li>
-            <li><strong> Payment Method: </strong> ${paymentMethod || "Pay At Hotel"}</li>
+            <li><strong> Payment Method: </strong> ${
+              paymentMethod || "Pay At Hotel"
+            }</li>
             <li><strong> Guests: </strong> ${guests}</li>
           </ul>
           <p>We look forward to welcoming you!</p>
@@ -134,7 +137,7 @@ export const getUserBookings = async (req, res) => {
 
 export const getHotelBookings = async (req, res) => {
   try {
-    const { userId } = req.auth();
+    const { userId } = req.auth; // Fix: req.auth is property, not function in newer Clerk SDKs, but keeping consistency with your middleware
     const hotel = await Hotel.findOne({ owner: userId });
 
     if (!hotel) {
@@ -162,35 +165,82 @@ export const getHotelBookings = async (req, res) => {
   }
 };
 
-// ⭐ NEW FUNCTION: Handle Payment Logic
-export const verifyPayment = async (req, res) => {
+export const stripePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
-    const userId = req.user._id;
-
     const booking = await Booking.findById(bookingId);
 
     if (!booking) {
-      return res.json({ success: false, message: "Booking not found" });
+        return res.json({ success: false, message: "Booking not found" });
     }
 
-    // Security Check: Ensure the logged-in user owns this booking
-    if (booking.user.toString() !== userId.toString()) {
-      return res.json({ success: false, message: "Unauthorized action" });
-    }
+    const roomData = await Room.findById(booking.room).populate("hotel");
+    const totalPrice = booking.totalPrice;
+    const { origin } = req.headers;
 
-    if (booking.isPaid) {
-      return res.json({ success: false, message: "Booking is already paid" });
-    }
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-    // Mark as Paid
-    booking.isPaid = true;
-    booking.paymentMethod = "Online (Verified)";
-    await booking.save();
+    const line_items = [
+      {
+        price_data: {
+          currency: "inr", // Changed to INR since your UI shows Rupee symbol
+          product_data: {
+            name: `${roomData.hotel.name} - ${roomData.roomType}`,
+          },
+          unit_amount: totalPrice * 100,
+        },
+        quantity: 1,
+      },
+    ];
 
-    res.json({ success: true, message: "Payment Successful! Booking Updated." });
+    const session = await stripeInstance.checkout.sessions.create({
+      line_items,
+      mode: "payment",
+      success_url: `${origin}/my-bookings?success=true`, // simplified URL
+      cancel_url: `${origin}/my-bookings?canceled=true`,
+      metadata: {
+        bookingId,
+      },
+    });
+    
+    // FIX: Changed req.json to res.json
+    res.json({ success: true, url: session.url });
+
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Payment Failed" });
   }
 };
+
+// ⭐ NEW: Cancel Booking Function
+export const cancelBooking = async (req, res) => {
+    try {
+      const { bookingId } = req.body;
+      const userId = req.user._id;
+  
+      const booking = await Booking.findById(bookingId).populate("hotel");
+  
+      if (!booking) {
+        return res.json({ success: false, message: "Booking not found" });
+      }
+  
+      // Authorization Check:
+      // 1. Is it the user who booked?
+      // 2. Is it the owner of the hotel?
+      const isUser = booking.user.toString() === userId.toString();
+      const isOwner = booking.hotel.owner.toString() === userId.toString();
+  
+      if (!isUser && !isOwner) {
+        return res.json({ success: false, message: "Not authorized to cancel this booking" });
+      }
+  
+      // HARD DELETE: Remove data
+      await Booking.findByIdAndDelete(bookingId);
+  
+      res.json({ success: true, message: "Booking cancelled and removed successfully" });
+  
+    } catch (error) {
+      console.error(error);
+      res.json({ success: false, message: error.message });
+    }
+  };

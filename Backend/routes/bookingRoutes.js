@@ -4,7 +4,8 @@ import {
   createBooking,
   getHotelBookings,
   getUserBookings,
-  verifyPayment, // ⭐ Import the new function
+  stripePayment,
+  cancelBooking, // Imported new function
 } from "../controllers/bookingController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -15,7 +16,10 @@ bookingRouter.post("/book", protect, createBooking);
 bookingRouter.get("/user", protect, getUserBookings);
 bookingRouter.get("/hotel", protect, getHotelBookings);
 
-// ⭐ New Route for Payment
-bookingRouter.post("/verify", protect, verifyPayment);
+// Fixed typo: stripe-payement -> stripe-payment
+bookingRouter.post('/stripe-payment', protect, stripePayment);
+
+// New Route
+bookingRouter.post('/cancel', protect, cancelBooking);
 
 export default bookingRouter;
