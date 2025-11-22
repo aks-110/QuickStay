@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useUser, useAuth, useClerk } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL;
+
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 const AppContext = createContext();
 
@@ -12,7 +13,6 @@ export const AppProvider = ({ children }) => {
   const currency = import.meta.env.VITE_CURRENCY || "$";
   const navigate = useNavigate();
   const { openSignIn } = useClerk();
-
   const { user } = useUser();
   const { getToken } = useAuth();
 
@@ -26,12 +26,9 @@ export const AppProvider = ({ children }) => {
       const { data } = await axios.get("/api/rooms");
       if (data.success) {
         setRooms(data.rooms);
-      } else {
-        toast.error("Failed to fetch rooms");
       }
     } catch (error) {
       console.error(error);
-      toast.error("Error connecting to server");
     }
   };
 
@@ -53,9 +50,7 @@ export const AppProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchUser();
-    }
+    if (user) fetchUser();
   }, [user]);
 
   useEffect(() => {

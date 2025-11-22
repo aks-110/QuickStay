@@ -4,7 +4,7 @@ import Hotel from "../models/Hotel.js";
 import Room from "../models/Room.js";
 import stripe from "stripe";
 
-// Helper function
+// --- HELPER FUNCTIONS ---
 const checkAvailabilityHelper = async (room, checkInDate, checkOutDate) => {
   const bookings = await Booking.find({
     room,
@@ -18,14 +18,12 @@ const checkAvailabilityHelper = async (room, checkInDate, checkOutDate) => {
   return bookings.length === 0;
 };
 
+// --- BOOKING CONTROLLERS ---
+
 export const checkAvailabilityAPI = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate } = req.body;
-    const isAvailable = await checkAvailabilityHelper(
-      room,
-      checkInDate,
-      checkOutDate
-    );
+    const isAvailable = await checkAvailabilityHelper(room, checkInDate, checkOutDate);
     res.json({ success: true, isAvailable });
   } catch (error) {
     res.json({ success: false, message: error.message });
@@ -38,29 +36,18 @@ export const createBooking = async (req, res) => {
     const user = req.user._id;
 
     // 1. Check Availability
-    const isAvailable = await checkAvailabilityHelper(
-      room,
-      checkInDate,
-      checkOutDate
-    );
+    const isAvailable = await checkAvailabilityHelper(room, checkInDate, checkOutDate);
 
     if (!isAvailable) {
-      return res.json({
-        success: false,
-        message: "Room not available for these dates",
-      });
+      return res.json({ success: false, message: "Room not available for these dates" });
     }
 
     const roomData = await Room.findById(room).populate("hotel");
-    if (!roomData)
-      return res.json({ success: false, message: "Room not found" });
+    if (!roomData) return res.json({ success: false, message: "Room not found" });
 
     // 2. Restriction: Prevent Owner Booking
     if (roomData.hotel.owner.toString() === user.toString()) {
-      return res.json({
-        success: false,
-        message: "You cannot book your own room",
-      });
+      return res.json({ success: false, message: "You cannot book your own room" });
     }
 
     let totalPrice = roomData.pricePerNight;
@@ -83,31 +70,65 @@ export const createBooking = async (req, res) => {
       paymentMethod: paymentMethod || "Pay At Hotel",
     });
 
-    // 4. Send Email
+    // 4. Send Enhanced Email
     try {
       if (req.user.email) {
         const mailOptions = {
           from: process.env.SENDER_EMAIL,
           to: req.user.email,
-          subject: "Hotel Booking Details",
+          subject: `Booking Confirmed - ${roomData.hotel.name}`,
           html: `
-          <h2>Your booking details:</h2>
-          <p>Dear ${req.user.username},</p>
-          <p>Thank you for your booking! Here are your details: </p>
-          <ul>
-            <li><strong> Booking ID: </strong> ${newBooking._id}</li>
-            <li><strong> Hotel Name: </strong> ${roomData.hotel.name}</li>
-            <li><strong> Room Type: </strong> ${roomData.roomType}</li>
-            <li><strong> Check-in Date: </strong> ${checkIn.toDateString()}</li>
-            <li><strong> Check-out Date: </strong> ${checkOut.toDateString()}</li>
-            <li><strong> Total Price: </strong> ₹${totalPrice}</li>
-            <li><strong> Payment Method: </strong> ${
-              paymentMethod || "Pay At Hotel"
-            }</li>
-            <li><strong> Guests: </strong> ${guests}</li>
-          </ul>
-          <p>We look forward to welcoming you!</p>
-          <p>Best regards,</p>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+              <div style="background-color: #000; color: #fff; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">Booking Confirmed</h1>
+              </div>
+              <div style="padding: 20px; color: #333;">
+                <p>Dear <strong>${req.user.username}</strong>,</p>
+                <p>Thank you for choosing <strong>${roomData.hotel.name}</strong>! We are pleased to confirm your stay.</p>
+                
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="margin-top: 0; color: #555;">Reservation Details</h3>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Booking ID:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${newBooking._id}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Room Type:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${roomData.roomType}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Check-In:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${checkIn.toDateString()}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Check-Out:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${checkOut.toDateString()}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Guests:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${guests}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Payment Method:</strong></td>
+                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${paymentMethod || "Pay At Hotel"}</td>
+                    </tr>
+                  </table>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                  <p style="font-size: 16px; color: #666; margin-bottom: 5px;">Total Amount</p>
+                  <h2 style="color: #000; margin: 0; font-size: 28px;">₹${totalPrice}</h2>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+
+                <p style="font-size: 12px; color: #888; text-align: center;">
+                  Need help? Contact the hotel directly or reply to this email.<br/>
+                  We wish you a pleasant stay!
+                </p>
+              </div>
+            </div>
           `,
         };
         await transporter.sendMail(mailOptions);
@@ -137,7 +158,7 @@ export const getUserBookings = async (req, res) => {
 
 export const getHotelBookings = async (req, res) => {
   try {
-    const { userId } = req.auth; // Fix: req.auth is property, not function in newer Clerk SDKs, but keeping consistency with your middleware
+    const { userId } = req.auth;
     const hotel = await Hotel.findOne({ owner: userId });
 
     if (!hotel) {
@@ -165,29 +186,39 @@ export const getHotelBookings = async (req, res) => {
   }
 };
 
+// --- PAYMENT & CANCELLATION ---
+
 export const stripePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
-    const booking = await Booking.findById(bookingId);
+    const { origin } = req.headers;
 
+    // 1. Safety Check for Stripe Key
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return res.json({ success: false, message: "Stripe Secret Key is missing in Server" });
+    }
+
+    const booking = await Booking.findById(bookingId);
     if (!booking) {
-        return res.json({ success: false, message: "Booking not found" });
+      return res.json({ success: false, message: "Booking not found" });
     }
 
     const roomData = await Room.findById(booking.room).populate("hotel");
     const totalPrice = booking.totalPrice;
-    const { origin } = req.headers;
+
+    // 2. Setup Frontend URL (Handles Localhost & Vercel)
+    const frontendUrl = origin ? origin.replace(/\/$/, "") : "http://localhost:5173";
 
     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
     const line_items = [
       {
         price_data: {
-          currency: "inr", // Changed to INR since your UI shows Rupee symbol
+          currency: "inr", 
           product_data: {
             name: `${roomData.hotel.name} - ${roomData.roomType}`,
           },
-          unit_amount: totalPrice * 100,
+          unit_amount: Math.round(totalPrice * 100), // Ensure integer
         },
         quantity: 1,
       },
@@ -196,23 +227,49 @@ export const stripePayment = async (req, res) => {
     const session = await stripeInstance.checkout.sessions.create({
       line_items,
       mode: "payment",
-      success_url: `${origin}/my-bookings?success=true`, // simplified URL
-      cancel_url: `${origin}/my-bookings?canceled=true`,
+      // 3. Pass Session ID in URL for Verification
+      success_url: `${frontendUrl}/my-bookings?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/my-bookings?canceled=true`,
       metadata: {
-        bookingId,
+        bookingId: bookingId.toString(),
       },
     });
-    
-    // FIX: Changed req.json to res.json
+
     res.json({ success: true, url: session.url });
 
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: "Payment Failed" });
+    console.error("Stripe Error:", error);
+    res.json({ success: false, message: "Payment Failed: " + error.message });
   }
 };
 
-// ⭐ NEW: Cancel Booking Function
+// ⭐ Verify Payment Endpoint (Required for Localhost/Vercel without Webhooks)
+export const verifyPayment = async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe Key Missing");
+
+        const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+        const session = await stripeInstance.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid') {
+            const { bookingId } = session.metadata;
+            
+            await Booking.findByIdAndUpdate(bookingId, {
+                isPaid: true,
+                paymentMethod: "Stripe"
+            });
+
+            res.json({ success: true, message: "Payment Verified Successfully" });
+        } else {
+            res.json({ success: false, message: "Payment not completed" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, message: "Verification Failed" });
+    }
+}
+
 export const cancelBooking = async (req, res) => {
     try {
       const { bookingId } = req.body;
@@ -224,9 +281,7 @@ export const cancelBooking = async (req, res) => {
         return res.json({ success: false, message: "Booking not found" });
       }
   
-      // Authorization Check:
-      // 1. Is it the user who booked?
-      // 2. Is it the owner of the hotel?
+      // Authorization Check: User OR Owner
       const isUser = booking.user.toString() === userId.toString();
       const isOwner = booking.hotel.owner.toString() === userId.toString();
   
@@ -234,7 +289,7 @@ export const cancelBooking = async (req, res) => {
         return res.json({ success: false, message: "Not authorized to cancel this booking" });
       }
   
-      // HARD DELETE: Remove data
+      // Hard Delete
       await Booking.findByIdAndDelete(bookingId);
   
       res.json({ success: true, message: "Booking cancelled and removed successfully" });
@@ -243,4 +298,4 @@ export const cancelBooking = async (req, res) => {
       console.error(error);
       res.json({ success: false, message: error.message });
     }
-  };
+};
