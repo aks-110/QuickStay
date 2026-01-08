@@ -15,7 +15,11 @@ connectDB();
 connectCloudinary();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: "https://quick-stay-one-peach.vercel.app",
+  credentials : true,
+  
+}));
 
 // API to listen to stripe webhooks
 // IMPORTANT: This must come BEFORE express.json()
