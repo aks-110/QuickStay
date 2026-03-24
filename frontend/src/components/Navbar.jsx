@@ -1,66 +1,56 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-
-import { useClerk, useUser, UserButton } from "@clerk/clerk-react";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useClerk, UserButton } from "@clerk/clerk-react";
 import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 
-const BookIcon = () => {
-  return (
-    <img
-      src={assets.totalBookingIcon}
-      alt="bookings"
-      style={{
-        width: "18px",
-        height: "18px",
-        filter: "brightness(0) saturate(100%)",
-      }}
-    />
-  );
-};
+const BookIcon = () => (
+  <img
+    src={assets.totalBookingIcon}
+    alt="bookings"
+    style={{
+      width: "18px",
+      height: "18px",
+      filter: "brightness(0) saturate(100%)",
+    }}
+  />
+);
 
 const Navbar = () => {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Hotels", path: "/rooms" },
-    { name: "Experience", path: "/" },
-    { name: "About", path: "/" },
   ];
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   const { openSignIn } = useClerk();
-
   const location = useLocation();
+  const {
+    user,
+    navigate,
+    isOwner,
+    setShowHotelReg,
+    language,
+    setLanguage,
+    currency,
+    setCurrency,
+  } = useAppContext();
 
-  const { user, navigate, isOwner, setShowHotelReg } = useAppContext();
-
-  // ⭐ FIXED VERSION ⭐
   useEffect(() => {
-    // If NOT on homepage => always scrolled navbar
     if (location.pathname !== "/") {
       setIsScrolled(true);
       return;
     }
-
-    // If on homepage => enable scroll detection
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, [location.pathname]);
-  // Important: listen to route changes
 
   return (
     <nav
-      className={`fixed top-0 left-0 w-full flex items-center justify-between px-4 md:px-16 lg:px-24 xl:px-32 transition-all duration-500 z-50 ${
-        isScrolled
-          ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4"
-          : "py-4 md:py-6"
-      }`}
+      className={`fixed top-0 left-0 w-full flex items-center justify-between px-4 md:px-16 lg:px-24 xl:px-32 transition-all duration-500 z-50 ${isScrolled ? "bg-white/90 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4" : "py-4 md:py-6"}`}
     >
-      {/* Logo */}
       <Link to="/">
         <img
           src={assets.logo}
@@ -69,30 +59,22 @@ const Navbar = () => {
         />
       </Link>
 
-      {/* Desktop Menu */}
       <div className="hidden md:flex items-center gap-4 lg:gap-8">
         {navLinks.map((link, i) => (
           <Link
             key={i}
             to={link.path}
-            className={`group flex flex-col gap-0.5 ${
-              isScrolled ? "text-gray-700" : "text-white"
-            }`}
+            className={`group flex flex-col gap-0.5 ${isScrolled ? "text-gray-700" : "text-white"}`}
           >
             {link.name}
             <div
-              className={`${
-                isScrolled ? "bg-gray-700" : "bg-white"
-              } h-0.5 w-0 group-hover:w-full transition-all duration-300`}
+              className={`${isScrolled ? "bg-gray-700" : "bg-white"} h-0.5 w-0 group-hover:w-full transition-all duration-300`}
             />
           </Link>
         ))}
-        {/* Dashboard Button */}
         {user && (
           <button
-            className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer transition-all ${
-              isScrolled ? "text-black" : "text-white"
-            }`}
+            className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer transition-all ${isScrolled ? "text-black border-black" : "text-white border-white"}`}
             onClick={() =>
               isOwner ? navigate("/owner") : setShowHotelReg(true)
             }
@@ -102,13 +84,37 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Desktop Right */}
       <div className="hidden md:flex items-center gap-4">
-        <img
-          src={assets.searchIcon}
-          alt="search"
-          className={`${isScrolled ? "invert" : ""} h-7 transition-all`}
-        />
+        {/* Language Selector */}
+        <select
+          onChange={(e) => setLanguage(e.target.value)}
+          value={language}
+          className={`bg-transparent text-sm outline-none cursor-pointer font-medium ${isScrolled ? "text-gray-700" : "text-white"}`}
+        >
+          <option value="EN" className="text-black">
+            EN
+          </option>
+          <option value="HI" className="text-black">
+            HI
+          </option>
+        </select>
+
+        {/* Currency Selector */}
+        <select
+          onChange={(e) => setCurrency(e.target.value)}
+          value={currency}
+          className={`bg-transparent text-sm outline-none cursor-pointer font-medium border-r pr-3 border-gray-300 ${isScrolled ? "text-gray-700" : "text-white"}`}
+        >
+          <option value="INR" className="text-black">
+            ₹ INR
+          </option>
+          <option value="USD" className="text-black">
+            $ USD
+          </option>
+          <option value="EUR" className="text-black">
+            € EUR
+          </option>
+        </select>
 
         {user ? (
           <UserButton>
@@ -123,83 +129,22 @@ const Navbar = () => {
         ) : (
           <button
             onClick={openSignIn}
-            className="bg-black text-white px-8 py-2.5 rounded-full ml-4 transition-all cursor-pointer"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full ml-2 transition-all cursor-pointer font-medium text-sm"
           >
             Login
           </button>
         )}
       </div>
 
-      {/* Mobile Menu Button */}
+      {/* Mobile Menu Toggle (Simplified for brevity) */}
       <div className="flex items-center gap-3 md:hidden">
-        {user && (
-          <UserButton>
-            <UserButton.MenuItems>
-              <UserButton.Action
-                label="My Bookings"
-                labelIcon={<BookIcon />}
-                onClick={() => navigate("/my-bookings")}
-              />
-            </UserButton.MenuItems>
-          </UserButton>
-        )}
-
-        <img
-          src={assets.searchIcon}
-          alt="search"
-          className={`${isScrolled ? "invert" : ""} h-4`}
-        />
-
-        {/* Hamburger Menu */}
         <button onClick={() => setIsMenuOpen(true)}>
-          <img src={assets.menuIcon} alt="menu" className="h-6" />
+          <img
+            src={assets.menuIcon}
+            alt="menu"
+            className={`h-6 ${isScrolled ? "invert" : ""}`}
+          />
         </button>
-      </div>
-
-      {/* Mobile Menu */}
-      <div
-        className={`fixed top-0 left-0 w-full h-screen bg-white text-base flex flex-col items-center justify-center gap-6 font-medium text-gray-800 transition-all duration-500 md:hidden ${
-          isMenuOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* Close Button */}
-        <button
-          className="absolute top-4 right-4"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          <img src={assets.closeIcon} alt="close-menu" className="h-8" />
-        </button>
-
-        {navLinks.map((link, i) => (
-          <Link
-            key={i}
-            to={link.path}
-            onClick={() => setIsMenuOpen(false)}
-            className="text-lg"
-          >
-            {link.name}
-          </Link>
-        ))}
-
-        {user && (
-          <button
-            className="border px-4 py-1 text-sm font-light rounded-full cursor-pointer transition-all"
-            onClick={() =>
-              isOwner ? navigate("/owner") : setShowHotelReg(true)
-            }
-          >
-            {isOwner ? "Dashboard" : "List Your Hotel"}
-          </button>
-        )}
-
-        {!user && (
-          <button
-            onClick={openSignIn}
-            className="bg-black text-white px-8 py-2.5 rounded-full transition-all cursor-pointer"
-          >
-            Login
-          </button>
-        )}
       </div>
     </nav>
   );

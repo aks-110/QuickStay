@@ -6,17 +6,17 @@ import Testimonial from "../components/Testimonial";
 import NewsLetter from "../components/NewsLetter";
 import RecommendedHotels from "../components/RecommendedHotels";
 
-function Home() {
+const Home = () => {
   return (
-    <>
+    <div className="overflow-hidden">
       <Hero />
-      <RecommendedHotels/>
+      <RecommendedHotels />
       <FeaturedDestination />
       <ExclusiveOffers />
       <Testimonial />
-      <NewsLetter/>
-    </>
+      <NewsLetter />
+    </div>
   );
-}
+};
 
 export default Home;

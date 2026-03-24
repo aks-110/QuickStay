@@ -17,12 +17,56 @@ const Footer = () => {
           </p>
 
           {/* Social Icons */}
-          <div className="flex items-center gap-4 mt-5">
-            <img src={assets.instagramIcon} alt="instagram" className="w-6 hover:opacity-70 transition dark:invert cursor-pointer" />
-            <img src={assets.facebookIcon} alt="facebook" className="w-6 hover:opacity-70 transition dark:invert cursor-pointer" />
-            <img src={assets.twitterIcon} alt="twitter" className="w-6 hover:opacity-70 transition dark:invert cursor-pointer" />
-            <img src={assets.linkendinIcon} alt="linkedin" className="w-6 hover:opacity-70 transition dark:invert cursor-pointer" />
-          </div>
+<div className="flex items-center gap-4 mt-5">
+  <a
+    href="https://www.instagram.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src={assets.instagramIcon}
+      alt="instagram"
+      className="w-6 hover:opacity-70 transition dark:invert cursor-pointer"
+    />
+  </a>
+
+  <a
+    href="https://www.facebook.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src={assets.facebookIcon}
+      alt="facebook"
+      className="w-6 hover:opacity-70 transition dark:invert cursor-pointer"
+    />
+  </a>
+
+  <a
+    href="https://twitter.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src={assets.twitterIcon}
+      alt="twitter"
+      className="w-6 hover:opacity-70 transition dark:invert cursor-pointer"
+    />
+  </a>
+
+  <a
+    href="https://www.linkedin.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src={assets.linkendinIcon}
+      alt="linkedin"
+      className="w-6 hover:opacity-70 transition dark:invert cursor-pointer"
+    />
+  </a>
+</div>
+
         </div>
 
         {/* Company Links */}

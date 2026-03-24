@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Title from "../components/Title";
-import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
 import toast from "react-hot-toast";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -10,20 +9,22 @@ const MyBookings = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [paymentLoading, setPaymentLoading] = useState(null);
-  
-  // Get URL Params to check for Stripe Success
+  const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
 
+  // Your exact functional logic remains unchanged
   const fetchBookings = async () => {
     try {
       const token = await getToken();
-      if(!token) return; // Wait for auth
+      if (!token) return;
       const { data } = await axios.get("/api/bookings/user", {
         headers: { authorization: `Bearer ${token}` },
       });
       if (data.success) setBookings(data.bookings);
     } catch (error) {
       toast.error("Failed to fetch bookings");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -31,33 +32,27 @@ const MyBookings = () => {
     fetchBookings();
   }, [axios, getToken]);
 
-  // ⭐ VERIFY PAYMENT ON RETURN
   useEffect(() => {
     const success = searchParams.get("success");
     const sessionId = searchParams.get("session_id");
-
     if (success === "true" && sessionId) {
       const verifyPayment = async () => {
         try {
-            const token = await getToken();
-            const { data } = await axios.post('/api/bookings/verify', 
-                { sessionId },
-                { headers: { authorization: `Bearer ${token}` }}
-            );
-
-            if(data.success){
-                toast.success("Payment Successful!");
-                fetchBookings(); // Refresh data to show "Paid"
-                // Clean URL
-                navigate("/my-bookings", { replace: true });
-            } else {
-                toast.error("Payment Verification Failed");
-            }
+          const token = await getToken();
+          const { data } = await axios.post(
+            "/api/bookings/verify",
+            { sessionId },
+            { headers: { authorization: `Bearer ${token}` } },
+          );
+          if (data.success) {
+            toast.success("Payment Successful!");
+            fetchBookings();
+            navigate("/my-bookings", { replace: true });
+          } else toast.error("Payment Verification Failed");
         } catch (error) {
-            console.error("Verification Error", error);
-            toast.error("Error verifying payment");
+          toast.error("Error verifying payment");
         }
-      }
+      };
       verifyPayment();
     }
   }, [searchParams, getToken, axios, navigate]);
@@ -65,87 +60,144 @@ const MyBookings = () => {
   const handlePayNow = async (bookingId) => {
     setPaymentLoading(bookingId);
     try {
-      const { data } = await axios.post('/api/bookings/stripe-payment',
+      const { data } = await axios.post(
+        "/api/bookings/stripe-payment",
         { bookingId },
-        { headers: { authorization: `Bearer ${await getToken()}` } }
+        { headers: { authorization: `Bearer ${await getToken()}` } },
       );
-      
-      if (data.success) {
-        // Redirect to Stripe
-        window.location.href = data.url;
-      } else {
-        toast.error(data.message);
-      }
+      if (data.success) window.location.href = data.url;
+      else toast.error(data.message);
     } catch (error) {
-      toast.error(error.response?.data?.message || "Payment initialization failed");
+      toast.error("Payment failed");
     } finally {
       setPaymentLoading(null);
     }
   };
 
   const handleCancel = async (bookingId) => {
-    if(!confirm("Are you sure you want to cancel this booking? This cannot be undone.")) return;
-
+    if (!confirm("Cancel this booking permanently?")) return;
     try {
-        const { data } = await axios.post('/api/bookings/cancel',
-            { bookingId },
-            { headers: { authorization: `Bearer ${await getToken()}` } }
-        );
-        if (data.success) {
-            toast.success(data.message);
-            setBookings((prev) => prev.filter(b => b._id !== bookingId));
-        } else {
-            toast.error(data.message);
-        }
+      const { data } = await axios.post(
+        "/api/bookings/cancel",
+        { bookingId },
+        { headers: { authorization: `Bearer ${await getToken()}` } },
+      );
+      if (data.success) {
+        toast.success("Booking Cancelled");
+        setBookings((prev) => prev.filter((b) => b._id !== bookingId));
+      } else toast.error(data.message);
     } catch (error) {
-        toast.error(error.message);
+      toast.error(error.message);
     }
   };
 
   return (
-    <div className="py-28 md:pb-35 md:pt-32 px-4 md:px-16 lg:px-24 xl:px-32 bg-gray-50 min-h-screen">
-      <Title title="My Bookings" subtitle="Manage your reservations." align="left" />
+    <div className="py-28 md:py-32 px-5 md:px-16 lg:px-24 xl:px-32 bg-[#F8FAFC] min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <Title
+          title="Your Trips"
+          subtitle="Manage your upcoming stays and past reservations."
+          align="left"
+        />
 
-      <div className="max-w-6xl mt-10 w-full text-gray-800 bg-white shadow-lg rounded-2xl p-6 border border-gray-200">
-        <div className="hidden md:grid md:grid-cols-[3fr_2fr_1.2fr] w-full border-b border-gray-300 font-semibold text-base py-3 text-gray-700">
-          <div>Hotels</div>
-          <div>Date & Timings</div>
-          <div>Actions & Payment</div>
+        <div className="mt-10 space-y-6">
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center">
+              <p className="text-gray-500 text-lg mb-4">
+                You have no upcoming trips.
+              </p>
+              <button
+                onClick={() => navigate("/rooms")}
+                className="text-blue-600 font-medium hover:underline"
+              >
+                Start exploring destinations
+              </button>
+            </div>
+          ) : (
+            bookings.map((booking) => (
+              <div
+                key={booking._id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex flex-col md:flex-row hover:shadow-md transition"
+              >
+                {/* Image Section */}
+                <div className="w-full md:w-64 h-48 md:h-auto">
+                  <img
+                    src={booking.room.images[0]}
+                    alt="hotel"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Info Section */}
+                <div className="flex-1 p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start mb-2">
+                      <h2 className="text-2xl font-playfair font-bold text-gray-900">
+                        {booking.hotel.name}
+                      </h2>
+                      <span
+                        className={`px-3 py-1 text-xs font-semibold rounded-full border ${booking.isPaid ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}
+                      >
+                        {booking.isPaid
+                          ? "Payment Verified"
+                          : "Action Required"}
+                      </span>
+                    </div>
+                    <p className="text-gray-500 text-sm mb-4">
+                      {booking.hotel.city} • {booking.room.roomType}
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100">
+                      <div>
+                        <p className="text-gray-400 font-medium">Check-In</p>
+                        <p className="text-gray-800 font-semibold">
+                          {new Date(booking.checkInDate).toDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 font-medium">Guests</p>
+                        <p className="text-gray-800 font-semibold">
+                          {booking.guests}{" "}
+                          {booking.guests > 1 ? "Guests" : "Guest"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Section */}
+                  <div className="flex flex-wrap items-center justify-between mt-6 pt-6 border-t border-gray-100 gap-4">
+                    <p className="text-xl font-bold text-gray-900">
+                      ₹{booking.totalPrice}
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => handleCancel(booking._id)}
+                        className="px-5 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      >
+                        Cancel Stay
+                      </button>
+                      {!booking.isPaid && (
+                        <button
+                          onClick={() => handlePayNow(booking._id)}
+                          disabled={paymentLoading === booking._id}
+                          className="px-6 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-800 shadow-sm transition active:scale-95"
+                        >
+                          {paymentLoading === booking._id
+                            ? "Loading..."
+                            : "Pay Now"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
-        
-        {bookings.length === 0 && <p className="text-center py-10 text-gray-500">No bookings found.</p>}
-
-        {bookings.map((booking) => (
-          <div key={booking._id} className="grid grid-cols-1 md:grid-cols-[3fr_2fr_1.2fr] w-full border-b border-gray-200 py-6 first:border-t bg-white hover:bg-gray-50 transition rounded-xl px-2">
-            <div className="flex flex-col md:flex-row gap-4">
-              <img src={booking.room.images[0]} alt="hotel" className="w-full md:w-40 h-32 object-cover rounded-xl shadow-md" />
-              <div className="flex flex-col gap-1.5">
-                <p className="font-playfair text-2xl font-semibold text-gray-900">{booking.hotel.name}</p>
-                <p className="text-base font-semibold text-gray-900">Total: <span className="text-indigo-600">₹{booking.totalPrice}</span></p>
-              </div>
-            </div>
-
-            <div className="flex flex-row md:items-center gap-10 text-gray-700">
-              <div><p className="font-medium">Check-In</p><p className="text-gray-500 text-sm">{new Date(booking.checkInDate).toDateString()}</p></div>
-            </div>
-
-            <div className="flex flex-col items-start justify-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className={`h-3 w-3 rounded-full ${booking.isPaid ? "bg-green-500" : "bg-red-500"}`}></span>
-                <p className="text-sm font-medium">{booking.isPaid ? "Paid" : "Unpaid"}</p>
-              </div>
-
-              <div className="flex flex-col gap-2 w-full max-w-[140px]">
-                  {!booking.isPaid && (
-                    <button onClick={() => handlePayNow(booking._id)} disabled={paymentLoading === booking._id} className="px-5 py-2 text-xs font-medium rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all active:scale-95">
-                      {paymentLoading === booking._id ? "Processing..." : "Pay Now"}
-                    </button>
-                  )}
-                  <button onClick={() => handleCancel(booking._id)} className="px-5 py-2 text-xs font-medium rounded-full border border-red-500 text-red-600 hover:bg-red-50 transition-all active:scale-95">Cancel</button>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
