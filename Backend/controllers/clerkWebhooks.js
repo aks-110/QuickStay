@@ -17,7 +17,6 @@ const clerkWebhooks = async (req, res) => {
 
     switch (type) {
       case "user.created": {
-        // Added brackets {} to create a new block scope
         const userData = {
           _id: data.id,
           email: data.email_addresses[0].email_address,
@@ -29,7 +28,6 @@ const clerkWebhooks = async (req, res) => {
       }
 
       case "user.updated": {
-        // Added brackets {} to create a new block scope
         const userData = {
           _id: data.id,
           email: data.email_addresses[0].email_address,

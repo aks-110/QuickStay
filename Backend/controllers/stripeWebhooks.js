@@ -34,7 +34,6 @@ export const stripeWebhooks = async (request, response) => {
           transactionId: paymentIntentId,
         });
 
-        // ✉️ EMAIL: Backup Webhook Success Email
         try {
           if (booking.user && booking.user.email) {
             await transporter.sendMail({

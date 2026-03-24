@@ -27,7 +27,7 @@ const RoomDetails = () => {
   const [myRating, setMyRating] = useState(5);
   const [myComment, setMyComment] = useState("");
 
-  // ⭐ 1. Safely Fetch Room Data
+  //  1. Safely Fetch Room Data
   const fetchRoomData = async () => {
     setLoadingRoom(true);
     try {
@@ -67,7 +67,7 @@ const RoomDetails = () => {
     }
   }, [id, axios]);
 
-  // ⭐ 2. Availability Check
+  //  2. Availability Check
   const checkAvailability = async () => {
     if (!room) return;
     if (!checkInDate || !checkOutDate) {

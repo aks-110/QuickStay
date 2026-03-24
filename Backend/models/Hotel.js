@@ -8,7 +8,7 @@ const hotelSchema = new mongoose.Schema(
     owner: { type: String, required: true, ref: "User" },
     city: { type: String, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Hotel = mongoose.model("Hotel", hotelSchema);

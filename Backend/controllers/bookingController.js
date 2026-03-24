@@ -31,7 +31,6 @@ export const checkAvailabilityAPI = async (req, res) => {
   }
 };
 
-
 export const createBooking = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate, guests, paymentMethod } = req.body;
@@ -75,7 +74,6 @@ export const createBooking = async (req, res) => {
       paymentMethod: paymentMethod || "Pay At Hotel",
     });
 
-    
     try {
       if (req.user.email && paymentMethod === "Pay At Hotel") {
         await transporter.sendMail({
@@ -142,7 +140,6 @@ export const getHotelBookings = async (req, res) => {
   }
 };
 
-// --- PAYMENT LOGIC ---
 export const stripePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -185,7 +182,6 @@ export const stripePayment = async (req, res) => {
   }
 };
 
-// ⭐ 2. VERIFY PAYMENT & SUCCESS EMAIL
 export const verifyPayment = async (req, res) => {
   try {
     const { sessionId } = req.body;
@@ -205,10 +201,9 @@ export const verifyPayment = async (req, res) => {
       await Booking.findByIdAndUpdate(bookingId, {
         isPaid: true,
         paymentMethod: "Stripe",
-        transactionId: session.payment_intent, // Save for refund
+        transactionId: session.payment_intent,
       });
 
-      // ✉️ EMAIL 2: Payment Success
       try {
         if (existingBooking.user && existingBooking.user.email) {
           await transporter.sendMail({
@@ -222,10 +217,10 @@ export const verifyPayment = async (req, res) => {
                                 <p>Your booking is fully confirmed!</p>
                             </div>`,
           });
-          console.log("✉️ Success Email sent to:", existingBooking.user.email);
+          console.log(" Success Email sent to:", existingBooking.user.email);
         }
       } catch (emailErr) {
-        console.log("❌ Email 2 Failed:", emailErr.message);
+        console.log(" Email 2 Failed:", emailErr.message);
       }
 
       res.json({ success: true, message: "Payment Verified Successfully" });
@@ -237,7 +232,6 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
-// ⭐ 3. CANCEL BOOKING, REFUND & EMAIL
 export const cancelBooking = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -253,7 +247,6 @@ export const cancelBooking = async (req, res) => {
     if (!isUser && !isOwner)
       return res.json({ success: false, message: "Not authorized to cancel" });
 
-    // ⭐ PROCESS STRIPE REFUND
     let refundStatusMsg = "";
     if (booking.isPaid && booking.transactionId) {
       try {
@@ -273,7 +266,6 @@ export const cancelBooking = async (req, res) => {
       refundStatusMsg = "No payment was made online, so no refund is required.";
     }
 
-    // ✉️ EMAIL 3: Cancellation & Refund
     try {
       if (booking.user && booking.user.email) {
         await transporter.sendMail({
@@ -289,10 +281,10 @@ export const cancelBooking = async (req, res) => {
                           </p>
                       </div>`,
         });
-        console.log("✉️ Cancel Email sent to:", booking.user.email);
+        console.log(" Cancel Email sent to:", booking.user.email);
       }
     } catch (emailErr) {
-      console.log("❌ Email 3 Failed:", emailErr.message);
+      console.log(" Email 3 Failed:", emailErr.message);
     }
 
     await Booking.findByIdAndDelete(bookingId);

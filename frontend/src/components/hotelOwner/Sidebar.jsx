@@ -15,7 +15,7 @@ const Sidebar = () => {
         <NavLink
           to={item.path}
           key={index}
-          end={item.path === "/owner"}   // ✅ FIXED — exact match only for dashboard
+          end={item.path === "/owner"}
           className={({ isActive }) =>
             `flex items-center py-3 px-4 md:px-8 gap-3 ${
               isActive

@@ -5,6 +5,6 @@ import { protect } from "../middleware/authMiddleware.js";
 const hotelRouter = express.Router();
 
 hotelRouter.post("/", protect, registerHotel);
-hotelRouter.post("/remove", protect, deleteHotel); // The mass deletion route
+hotelRouter.post("/remove", protect, deleteHotel);
 
 export default hotelRouter;

@@ -6,7 +6,6 @@ export const addReview = async (req, res) => {
     const { room, rating, comment } = req.body;
     const user = req.user._id;
 
-    // Check if user actually booked and paid for this room
     const hasBooked = await Booking.findOne({ user, room, isPaid: true });
     if (!hasBooked) {
       return res.json({
@@ -15,7 +14,6 @@ export const addReview = async (req, res) => {
       });
     }
 
-    // Check if review already exists
     const existingReview = await Review.findOne({ user, room });
     if (existingReview) {
       return res.json({

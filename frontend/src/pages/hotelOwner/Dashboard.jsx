@@ -59,7 +59,6 @@ const Dashboard = () => {
     }
   };
 
-  // ⭐ MASS DELETION HANDLER
   const handleDeleteHotel = async () => {
     const confirmation = confirm(
       "DANGER: Are you absolutely sure?\n\nDeleting your property will:\n1. Delete all your listed rooms.\n2. Cancel ALL active guest bookings.\n3. Automatically REFUND all guests who paid online.\n4. Send cancellation emails to all booked guests.\n\nThis action CANNOT be undone!",

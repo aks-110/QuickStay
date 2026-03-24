@@ -155,7 +155,7 @@ const HotelReg = () => {
             />
           </div>
 
-          {/* ⭐ Global Phone Contact with Country Code ⭐ */}
+          {/*  Global Phone Contact with Country Code  */}
           <div className="w-full mt-4">
             <label className="font-medium text-gray-600 text-sm">
               Phone Contact

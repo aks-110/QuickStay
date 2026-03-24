@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 import connectDB from "./configs/db.js";
 import { clerkMiddleware } from "@clerk/express";
-import clerkWebhooks from "./controllers/clerkWebhooks.js"; // This is default export, so no {}
+import clerkWebhooks from "./controllers/clerkWebhooks.js";
 import userRouter from "./routes/userRoutes.js";
 import hotelRouter from "./routes/hotelRoutes.js";
 import connectCloudinary from "./configs/cloudinary.js";
@@ -16,25 +16,22 @@ connectDB();
 connectCloudinary();
 
 const app = express();
-app.use(cors({
-  origin: "https://quick-stay-one-peach.vercel.app",
-  credentials : true,
-  
-}));
+app.use(
+  cors({
+    origin: "https://quick-stay-one-peach.vercel.app",
+    credentials: true,
+  }),
+);
 
-// API to listen to stripe webhooks
-// IMPORTANT: This must come BEFORE express.json()
 app.post(
   "/api/stripe",
   express.raw({ type: "application/json" }),
   stripeWebhooks,
 );
 
-// Middleware
 app.use(express.json());
 app.use(clerkMiddleware());
 
-// Routes
 app.get("/", (req, res) => res.send("Hello from backend"));
 app.use("/api/clerk", clerkWebhooks);
 app.use("/api/user", userRouter);

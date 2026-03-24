@@ -57,7 +57,7 @@ function Hero() {
 
   const onSearch = async (e) => {
     e.preventDefault();
-    // ⭐ FALLBACK LOGIC: Even if API fails or user doesn't click dropdown, use what they typed
+
     const finalSearch = destination || query;
     if (!finalSearch.trim()) return;
 

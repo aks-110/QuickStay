@@ -26,51 +26,44 @@ export const registerHotel = async (req, res) => {
   }
 };
 
-// ⭐ UPGRADED: Delete Hotel with Mass Refund & Mass Emails
 export const deleteHotel = async (req, res) => {
   try {
     const owner = req.user._id;
 
-    // 1. Find the hotel owned by this user
     const hotel = await Hotel.findOne({ owner });
 
     if (!hotel) {
       return res.json({ success: false, message: "No hotel found to delete" });
     }
 
-    // 2. Fetch all bookings associated with this hotel to process refunds and emails
     const activeBookings = await Booking.find({ hotel: hotel._id }).populate(
       "user room",
     );
 
-    // Initialize Stripe
     const stripeInstance = process.env.STRIPE_SECRET_KEY
       ? new stripe(process.env.STRIPE_SECRET_KEY)
       : null;
 
-    // 3. Loop through all bookings safely (Mass Refund & Mass Email)
     for (const booking of activeBookings) {
       let refundStatusMsg =
         "No online payment was made, so no refund is required.";
 
-      // Process Stripe Refund if paid online
       if (booking.isPaid && booking.transactionId && stripeInstance) {
         try {
           await stripeInstance.refunds.create({
             payment_intent: booking.transactionId,
           });
           refundStatusMsg = `A full refund of <b>₹${booking.totalPrice}</b> has been processed to your original payment method. It may take 3-5 business days to reflect in your account.`;
-          console.log(`✅ Refunded Booking ID: ${booking._id}`);
+          console.log(` Refunded Booking ID: ${booking._id}`);
         } catch (refundError) {
           console.error(
-            `❌ Refund Failed for Booking ID: ${booking._id}`,
+            ` Refund Failed for Booking ID: ${booking._id}`,
             refundError.message,
           );
           refundStatusMsg = `We attempted to process your refund of ₹${booking.totalPrice}, but encountered a delay. Our team will manually process this shortly.`;
         }
       }
 
-      // Send Apology & Cancellation Email to Guest
       if (booking.user && booking.user.email) {
         try {
           await transporter.sendMail({
@@ -104,19 +97,15 @@ export const deleteHotel = async (req, res) => {
       }
     }
 
-    // 4. Delete all bookings related to this hotel from Database
     await Booking.deleteMany({ hotel: hotel._id });
-    console.log(`🗑️ Deleted all bookings for hotel ${hotel.name}`);
+    console.log(` Deleted all bookings for hotel ${hotel.name}`);
 
-    // 5. Delete all rooms related to this hotel
     await Room.deleteMany({ hotel: hotel._id });
-    console.log(`🗑️ Deleted all rooms for hotel ${hotel.name}`);
+    console.log(` Deleted all rooms for hotel ${hotel.name}`);
 
-    // 6. Delete the hotel itself
     await Hotel.findByIdAndDelete(hotel._id);
-    console.log(`🗑️ Deleted hotel ${hotel.name}`);
+    console.log(` Deleted hotel ${hotel.name}`);
 
-    // 7. Downgrade user role back to normal "user"
     await User.findByIdAndUpdate(owner, { role: "user" });
 
     res.json({

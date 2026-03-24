@@ -6,15 +6,21 @@ export const createRoom = async (req, res) => {
   try {
     const { roomType, pricePerNight, amenities } = req.body;
     const { userId } = req.auth;
-    
+
     const hotel = await Hotel.findOne({ owner: userId });
 
     if (!hotel) {
-      return res.json({ success: false, message: "Hotel not found. Please register first." });
+      return res.json({
+        success: false,
+        message: "Hotel not found. Please register first.",
+      });
     }
 
     if (!req.files || req.files.length === 0) {
-        return res.json({ success: false, message: "Please upload at least one image" });
+      return res.json({
+        success: false,
+        message: "Please upload at least one image",
+      });
     }
 
     // Upload images
@@ -58,11 +64,14 @@ export const getRooms = async (req, res) => {
 export const getOwnerRooms = async (req, res) => {
   try {
     const { userId } = req.auth;
-    
+
     const hotelData = await Hotel.findOne({ owner: userId });
 
-    if(!hotelData) {
-         return res.json({ success: false, message: "No hotel found for this user" });
+    if (!hotelData) {
+      return res.json({
+        success: false,
+        message: "No hotel found for this user",
+      });
     }
 
     const rooms = await Room.find({ hotel: hotelData._id }).populate("hotel");
@@ -72,13 +81,13 @@ export const getOwnerRooms = async (req, res) => {
   }
 };
 
-
 export const toggleRoomAvailability = async (req, res) => {
   try {
     const { roomId } = req.body;
     const roomData = await Room.findById(roomId);
-    
-    if (!roomData) return res.json({ success: false, message: "Room not found" });
+
+    if (!roomData)
+      return res.json({ success: false, message: "Room not found" });
 
     roomData.isAvailable = !roomData.isAvailable;
     await roomData.save();
@@ -88,29 +97,29 @@ export const toggleRoomAvailability = async (req, res) => {
   }
 };
 
-
 export const removeRoom = async (req, res) => {
-    try {
-        const { roomId } = req.body;
-        const { userId } = req.auth; // Get owner ID from Clerk
+  try {
+    const { roomId } = req.body;
+    const { userId } = req.auth;
 
-        const room = await Room.findById(roomId).populate("hotel");
+    const room = await Room.findById(roomId).populate("hotel");
 
-        if(!room) {
-            return res.json({ success: false, message: "Room not found"});
-        }
-
-        // Security Check: Ensure the requester owns the hotel associated with the room
-        if(room.hotel.owner.toString() !== userId) {
-            return res.json({ success: false, message: "Not authorized to delete this room"});
-        }
-
-        await Room.findByIdAndDelete(roomId);
-
-        res.json({ success: true, message: "Room deleted successfully"});
-
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, message: error.message });
+    if (!room) {
+      return res.json({ success: false, message: "Room not found" });
     }
-}
+
+    if (room.hotel.owner.toString() !== userId) {
+      return res.json({
+        success: false,
+        message: "Not authorized to delete this room",
+      });
+    }
+
+    await Room.findByIdAndDelete(roomId);
+
+    res.json({ success: true, message: "Room deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.json({ success: false, message: error.message });
+  }
+};

@@ -19,11 +19,9 @@ export const AppProvider = ({ children }) => {
   const [searchedCities, setSearchedCities] = useState([]);
   const [rooms, setRooms] = useState([]);
 
-  // ⭐ Multi-Currency & Language States
   const [currency, setCurrency] = useState("INR");
   const [language, setLanguage] = useState("EN");
 
-  // Simple Exchange Rates (Base INR)
   const exchangeRates = { INR: 1, USD: 83, EUR: 90 };
   const currencySymbols = { INR: "₹", USD: "$", EUR: "€" };
 
