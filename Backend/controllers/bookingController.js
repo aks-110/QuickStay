@@ -4,7 +4,6 @@ import Hotel from "../models/Hotel.js";
 import Room from "../models/Room.js";
 import stripe from "stripe";
 
-// --- HELPER FUNCTIONS ---
 const checkAvailabilityHelper = async (room, checkInDate, checkOutDate) => {
   const bookings = await Booking.find({
     room,
@@ -18,47 +17,53 @@ const checkAvailabilityHelper = async (room, checkInDate, checkOutDate) => {
   return bookings.length === 0;
 };
 
-// --- BOOKING CONTROLLERS ---
-
 export const checkAvailabilityAPI = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate } = req.body;
-    const isAvailable = await checkAvailabilityHelper(room, checkInDate, checkOutDate);
+    const isAvailable = await checkAvailabilityHelper(
+      room,
+      checkInDate,
+      checkOutDate,
+    );
     res.json({ success: true, isAvailable });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
 };
 
+
 export const createBooking = async (req, res) => {
   try {
     const { room, checkInDate, checkOutDate, guests, paymentMethod } = req.body;
     const user = req.user._id;
 
-    // 1. Check Availability
-    const isAvailable = await checkAvailabilityHelper(room, checkInDate, checkOutDate);
-
-    if (!isAvailable) {
-      return res.json({ success: false, message: "Room not available for these dates" });
-    }
+    const isAvailable = await checkAvailabilityHelper(
+      room,
+      checkInDate,
+      checkOutDate,
+    );
+    if (!isAvailable)
+      return res.json({ success: false, message: "Room not available" });
 
     const roomData = await Room.findById(room).populate("hotel");
-    if (!roomData) return res.json({ success: false, message: "Room not found" });
+    if (!roomData)
+      return res.json({ success: false, message: "Room not found" });
 
-    // 2. Restriction: Prevent Owner Booking
     if (roomData.hotel.owner.toString() === user.toString()) {
-      return res.json({ success: false, message: "You cannot book your own room" });
+      return res.json({
+        success: false,
+        message: "You cannot book your own room",
+      });
     }
 
-    let totalPrice = roomData.pricePerNight;
     const checkIn = new Date(checkInDate);
     const checkOut = new Date(checkOutDate);
-    const timeDiff = checkOut.getTime() - checkIn.getTime();
-    const nights = Math.ceil(timeDiff / (1000 * 3600 * 24)) || 1;
+    const nights =
+      Math.ceil(
+        (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24),
+      ) || 1;
+    const totalPrice = roomData.pricePerNight * nights;
 
-    totalPrice = totalPrice * nights;
-
-    // 3. Create Booking
     const newBooking = await Booking.create({
       user,
       room,
@@ -70,76 +75,32 @@ export const createBooking = async (req, res) => {
       paymentMethod: paymentMethod || "Pay At Hotel",
     });
 
-    // 4. Send Enhanced Email
+    
     try {
-      if (req.user.email) {
-        const mailOptions = {
+      if (req.user.email && paymentMethod === "Pay At Hotel") {
+        await transporter.sendMail({
           from: process.env.SENDER_EMAIL,
           to: req.user.email,
-          subject: `Booking Confirmed - ${roomData.hotel.name}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-              <div style="background-color: #000; color: #fff; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">Booking Confirmed</h1>
-              </div>
-              <div style="padding: 20px; color: #333;">
-                <p>Dear <strong>${req.user.username}</strong>,</p>
-                <p>Thank you for choosing <strong>${roomData.hotel.name}</strong>! We are pleased to confirm your stay.</p>
-                
-                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <h3 style="margin-top: 0; color: #555;">Reservation Details</h3>
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Booking ID:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${newBooking._id}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Room Type:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${roomData.roomType}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Check-In:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${checkIn.toDateString()}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Check-Out:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${checkOut.toDateString()}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Guests:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${guests}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee;"><strong>Payment Method:</strong></td>
-                      <td style="padding: 8px 0; border-bottom: 1px solid #eee; text-align: right;">${paymentMethod || "Pay At Hotel"}</td>
-                    </tr>
-                  </table>
-                </div>
-
-                <div style="text-align: center; margin-top: 20px;">
-                  <p style="font-size: 16px; color: #666; margin-bottom: 5px;">Total Amount</p>
-                  <h2 style="color: #000; margin: 0; font-size: 28px;">₹${totalPrice}</h2>
-                </div>
-
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-
-                <p style="font-size: 12px; color: #888; text-align: center;">
-                  Need help? Contact the hotel directly or reply to this email.<br/>
-                  We wish you a pleasant stay!
-                </p>
-              </div>
-            </div>
-          `,
-        };
-        await transporter.sendMail(mailOptions);
+          subject: `Booking Reserved - ${roomData.hotel.name}`,
+          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #2196F3;">Booking Reserved! 🏨</h2>
+                    <p>Hi ${req.user.username},</p>
+                    <p>Your stay at <b>${roomData.hotel.name}</b> from <b>${checkIn.toDateString()}</b> to <b>${checkOut.toDateString()}</b> is reserved.</p>
+                    <p>Total Amount: <b>₹${totalPrice}</b>. Please pay at the hotel during check-in.</p>
+                  </div>`,
+        });
+        console.log(" Booking Email sent to:", req.user.email);
       }
-    } catch (emailError) {
-      console.error("Email failed to send:", emailError.message);
+    } catch (emailErr) {
+      console.log(" Email 1 Failed:", emailErr.message);
     }
 
-    res.json({ success: true, message: "Booking created successfully" });
+    res.json({
+      success: true,
+      message: "Booking created successfully",
+      bookingId: newBooking._id,
+    });
   } catch (error) {
-    console.log(error);
     res.json({ success: false, message: "Booking failed: " + error.message });
   }
 };
@@ -160,19 +121,15 @@ export const getHotelBookings = async (req, res) => {
   try {
     const { userId } = req.auth;
     const hotel = await Hotel.findOne({ owner: userId });
-
-    if (!hotel) {
-      return res.json({ success: false, message: "Hotel not found" });
-    }
+    if (!hotel) return res.json({ success: false, message: "Hotel not found" });
 
     const bookings = await Booking.find({ hotel: hotel._id })
       .populate("room hotel user")
       .sort({ createdAt: -1 });
-
     const totalBookings = bookings.length;
     const totalRevenue = bookings.reduce(
       (acc, booking) => acc + booking.totalPrice,
-      0
+      0,
     );
 
     res.json({
@@ -181,121 +138,169 @@ export const getHotelBookings = async (req, res) => {
       bookings,
     });
   } catch (error) {
-    console.log(error);
     res.json({ success: false, message: "Failed to fetch bookings" });
   }
 };
 
-// --- PAYMENT & CANCELLATION ---
-
+// --- PAYMENT LOGIC ---
 export const stripePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
     const { origin } = req.headers;
-
-    // 1. Safety Check for Stripe Key
-    if (!process.env.STRIPE_SECRET_KEY) {
-        return res.json({ success: false, message: "Stripe Secret Key is missing in Server" });
-    }
+    if (!process.env.STRIPE_SECRET_KEY)
+      return res.json({ success: false, message: "Stripe Key missing" });
 
     const booking = await Booking.findById(bookingId);
-    if (!booking) {
+    if (!booking)
       return res.json({ success: false, message: "Booking not found" });
-    }
 
     const roomData = await Room.findById(booking.room).populate("hotel");
-    const totalPrice = booking.totalPrice;
-
-    // 2. Setup Frontend URL (Handles Localhost & Vercel)
-    const frontendUrl = origin ? origin.replace(/\/$/, "") : "http://localhost:5173";
-
+    const frontendUrl = origin
+      ? origin.replace(/\/$/, "")
+      : "http://localhost:5173";
     const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
 
-    const line_items = [
-      {
-        price_data: {
-          currency: "inr", 
-          product_data: {
-            name: `${roomData.hotel.name} - ${roomData.roomType}`,
-          },
-          unit_amount: Math.round(totalPrice * 100), // Ensure integer
-        },
-        quantity: 1,
-      },
-    ];
-
     const session = await stripeInstance.checkout.sessions.create({
-      line_items,
+      line_items: [
+        {
+          price_data: {
+            currency: "inr",
+            product_data: {
+              name: `${roomData.hotel.name} - ${roomData.roomType}`,
+            },
+            unit_amount: Math.round(booking.totalPrice * 100),
+          },
+          quantity: 1,
+        },
+      ],
       mode: "payment",
-      // 3. Pass Session ID in URL for Verification
       success_url: `${frontendUrl}/my-bookings?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${frontendUrl}/my-bookings?canceled=true`,
-      metadata: {
-        bookingId: bookingId.toString(),
-      },
+      metadata: { bookingId: bookingId.toString() },
     });
 
     res.json({ success: true, url: session.url });
-
   } catch (error) {
-    console.error("Stripe Error:", error);
     res.json({ success: false, message: "Payment Failed: " + error.message });
   }
 };
 
-// ⭐ Verify Payment Endpoint (Required for Localhost/Vercel without Webhooks)
+// ⭐ 2. VERIFY PAYMENT & SUCCESS EMAIL
 export const verifyPayment = async (req, res) => {
-    try {
-        const { sessionId } = req.body;
-        if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe Key Missing");
+  try {
+    const { sessionId } = req.body;
+    if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe Key Missing");
 
-        const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
-        const session = await stripeInstance.checkout.sessions.retrieve(sessionId);
+    const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+    const session = await stripeInstance.checkout.sessions.retrieve(sessionId);
 
-        if (session.payment_status === 'paid') {
-            const { bookingId } = session.metadata;
-            
-            await Booking.findByIdAndUpdate(bookingId, {
-                isPaid: true,
-                paymentMethod: "Stripe"
-            });
+    if (session.payment_status === "paid") {
+      const { bookingId } = session.metadata;
 
-            res.json({ success: true, message: "Payment Verified Successfully" });
-        } else {
-            res.json({ success: false, message: "Payment not completed" });
+      const existingBooking =
+        await Booking.findById(bookingId).populate("hotel user");
+      if (existingBooking.isPaid)
+        return res.json({ success: true, message: "Already Verified" });
+
+      await Booking.findByIdAndUpdate(bookingId, {
+        isPaid: true,
+        paymentMethod: "Stripe",
+        transactionId: session.payment_intent, // Save for refund
+      });
+
+      // ✉️ EMAIL 2: Payment Success
+      try {
+        if (existingBooking.user && existingBooking.user.email) {
+          await transporter.sendMail({
+            from: process.env.SENDER_EMAIL,
+            to: existingBooking.user.email,
+            subject: `Payment Successful - ${existingBooking.hotel.name}`,
+            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                                <h2 style="color: #4CAF50;">Payment Received! 🎉</h2>
+                                <p>Hi ${existingBooking.user.username},</p>
+                                <p>We received your payment of <b>₹${existingBooking.totalPrice}</b> for <b>${existingBooking.hotel.name}</b>.</p>
+                                <p>Your booking is fully confirmed!</p>
+                            </div>`,
+          });
+          console.log("✉️ Success Email sent to:", existingBooking.user.email);
         }
-    } catch (error) {
-        console.error(error);
-        res.json({ success: false, message: "Verification Failed" });
-    }
-}
+      } catch (emailErr) {
+        console.log("❌ Email 2 Failed:", emailErr.message);
+      }
 
-export const cancelBooking = async (req, res) => {
-    try {
-      const { bookingId } = req.body;
-      const userId = req.user._id;
-  
-      const booking = await Booking.findById(bookingId).populate("hotel");
-  
-      if (!booking) {
-        return res.json({ success: false, message: "Booking not found" });
-      }
-  
-      // Authorization Check: User OR Owner
-      const isUser = booking.user.toString() === userId.toString();
-      const isOwner = booking.hotel.owner.toString() === userId.toString();
-  
-      if (!isUser && !isOwner) {
-        return res.json({ success: false, message: "Not authorized to cancel this booking" });
-      }
-  
-      // Hard Delete
-      await Booking.findByIdAndDelete(bookingId);
-  
-      res.json({ success: true, message: "Booking cancelled and removed successfully" });
-  
-    } catch (error) {
-      console.error(error);
-      res.json({ success: false, message: error.message });
+      res.json({ success: true, message: "Payment Verified Successfully" });
+    } else {
+      res.json({ success: false, message: "Payment not completed" });
     }
+  } catch (error) {
+    res.json({ success: false, message: "Verification Failed" });
+  }
+};
+
+// ⭐ 3. CANCEL BOOKING, REFUND & EMAIL
+export const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+    const userId = req.user._id;
+
+    const booking =
+      await Booking.findById(bookingId).populate("hotel user room");
+    if (!booking)
+      return res.json({ success: false, message: "Booking not found" });
+
+    const isUser = booking.user._id.toString() === userId.toString();
+    const isOwner = booking.hotel.owner.toString() === userId.toString();
+    if (!isUser && !isOwner)
+      return res.json({ success: false, message: "Not authorized to cancel" });
+
+    // ⭐ PROCESS STRIPE REFUND
+    let refundStatusMsg = "";
+    if (booking.isPaid && booking.transactionId) {
+      try {
+        const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY);
+        await stripeInstance.refunds.create({
+          payment_intent: booking.transactionId,
+        });
+        refundStatusMsg = `A refund of ₹${booking.totalPrice} has been initiated to your original payment method (Takes 3-5 days).`;
+      } catch (refundError) {
+        console.error("Refund Error:", refundError.message);
+        return res.json({
+          success: false,
+          message: "Cancellation failed due to Stripe refund error.",
+        });
+      }
+    } else {
+      refundStatusMsg = "No payment was made online, so no refund is required.";
+    }
+
+    // ✉️ EMAIL 3: Cancellation & Refund
+    try {
+      if (booking.user && booking.user.email) {
+        await transporter.sendMail({
+          from: process.env.SENDER_EMAIL,
+          to: booking.user.email,
+          subject: `Booking Cancelled - ${booking.hotel.name}`,
+          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                          <h2 style="color: #F44336;">Booking Cancelled</h2>
+                          <p>Hi ${booking.user.username},</p>
+                          <p>Your booking at <b>${booking.hotel.name}</b> has been cancelled.</p>
+                          <p style="background-color: #f9f9f9; padding: 10px; border-left: 4px solid #F44336;">
+                              <b>Refund Status:</b> ${refundStatusMsg}
+                          </p>
+                      </div>`,
+        });
+        console.log("✉️ Cancel Email sent to:", booking.user.email);
+      }
+    } catch (emailErr) {
+      console.log("❌ Email 3 Failed:", emailErr.message);
+    }
+
+    await Booking.findByIdAndDelete(bookingId);
+    res.json({
+      success: true,
+      message: "Booking cancelled and refunded successfully",
+    });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
 };

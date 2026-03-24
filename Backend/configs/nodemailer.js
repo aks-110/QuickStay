@@ -1,16 +1,25 @@
 import nodemailer from "nodemailer";
 import "dotenv/config";
 
-// OPTION 1: BREVO (Try Port 465 if 587 times out)
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
-  port: 587, // Changed from 587 to 465 (Secure)s
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
+transporter.verify((error, success) => {
+  if (error) {
+    console.error(
+      " NODEMAILER ERROR: Cannot connect to Brevo SMTP ->",
+      error.message,
+    );
+  } else {
+    console.log(" NODEMAILER READY: Server is ready to send emails!");
+  }
+});
 
-
-export default transporter ;
+export default transporter;

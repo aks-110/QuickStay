@@ -16,6 +16,8 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentMethod: { type: String, required: true, default: "Pay At Hotel" },
     isPaid: { type: Boolean, default: false },
+    
+    transactionId: { type: String, default: "" }, 
   },
   { timestamps: true }
 );
@@ -23,4 +25,3 @@ const bookingSchema = new mongoose.Schema(
 const Booking = mongoose.model("Booking", bookingSchema);
 
 export default Booking;
-

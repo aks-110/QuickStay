@@ -9,7 +9,8 @@ import hotelRouter from "./routes/hotelRoutes.js";
 import connectCloudinary from "./configs/cloudinary.js";
 import roomRouter from "./routes/roomRoutes.js";
 import bookingRouter from "./routes/bookingRoutes.js";
-import { stripeWebhooks } from "./controllers/stripeWebhooks.js"; 
+import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
+import reviewRouter from "./routes/reviewRoutes.js";
 
 connectDB();
 connectCloudinary();
@@ -26,7 +27,7 @@ app.use(cors({
 app.post(
   "/api/stripe",
   express.raw({ type: "application/json" }),
-  stripeWebhooks
+  stripeWebhooks,
 );
 
 // Middleware
@@ -40,6 +41,7 @@ app.use("/api/user", userRouter);
 app.use("/api/hotels", hotelRouter);
 app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
+app.use("/api/reviews", reviewRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
