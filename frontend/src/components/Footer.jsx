@@ -43,7 +43,7 @@ const Footer = () => {
   </a>
 
   <a
-    href="https://twitter.com/"
+    href="https://x.com/"
     target="_blank"
     rel="noopener noreferrer"
   >
@@ -55,7 +55,7 @@ const Footer = () => {
   </a>
 
   <a
-    href="https://www.linkedin.com/"
+    href="https://www.linkedin.com/in/aks110/"
     target="_blank"
     rel="noopener noreferrer"
   >
