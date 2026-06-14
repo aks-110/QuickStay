@@ -40,5 +40,9 @@ app.use("/api/rooms", roomRouter);
 app.use("/api/bookings", bookingRouter);
 app.use("/api/reviews", reviewRouter);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+}
+
+export default app;
