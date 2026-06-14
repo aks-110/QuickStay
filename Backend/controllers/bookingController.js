@@ -80,11 +80,33 @@ export const createBooking = async (req, res) => {
           from: process.env.SENDER_EMAIL,
           to: req.user.email,
           subject: `Booking Reserved - ${roomData.hotel.name}`,
-          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                    <h2 style="color: #2196F3;">Booking Reserved! 🏨</h2>
+          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #2196F3; text-align: center;">Booking Reserved! 🏨</h2>
                     <p>Hi ${req.user.username},</p>
-                    <p>Your stay at <b>${roomData.hotel.name}</b> from <b>${checkIn.toDateString()}</b> to <b>${checkOut.toDateString()}</b> is reserved.</p>
-                    <p>Total Amount: <b>₹${totalPrice}</b>. Please pay at the hotel during check-in.</p>
+                    <p>Great news! Your stay at <b>${roomData.hotel.name}</b> has been successfully reserved.</p>
+                    
+                    <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                      <h3 style="margin-top: 0; color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px;">Reservation Details</h3>
+                      <ul style="list-style: none; padding: 0; line-height: 1.6;">
+                        <li><b>Hotel:</b> ${roomData.hotel.name}</li>
+                        <li><b>Address:</b> ${roomData.hotel.address}, ${roomData.hotel.city}</li>
+                        <li><b>Hotel Contact:</b> ${roomData.hotel.contact}</li>
+                        <li><b>Room Type:</b> ${roomData.roomType}</li>
+                        <li><b>Check-In:</b> ${checkIn.toDateString()}</li>
+                        <li><b>Check-Out:</b> ${checkOut.toDateString()}</li>
+                        <li><b>Guests:</b> ${guests}</li>
+                      </ul>
+                    </div>
+
+                    <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                      <h3 style="margin-top: 0; color: #856404;">Payment Summary</h3>
+                      <p><b>Total Amount:</b> ₹${totalPrice}</p>
+                      <p><b>Status:</b> To be paid at the hotel</p>
+                      <p><i>Please ensure you pay the full amount at the reception during check-in.</i></p>
+                    </div>
+                    
+                    <p>If you have any questions, feel free to contact the hotel directly.</p>
+                    <p>Safe travels!<br><b>QuickStay Team</b></p>
                   </div>`,
         });
         console.log(" Booking Email sent to:", req.user.email);
@@ -194,7 +216,7 @@ export const verifyPayment = async (req, res) => {
       const { bookingId } = session.metadata;
 
       const existingBooking =
-        await Booking.findById(bookingId).populate("hotel user");
+        await Booking.findById(bookingId).populate("hotel user room");
       if (existingBooking.isPaid)
         return res.json({ success: true, message: "Already Verified" });
 
@@ -210,11 +232,27 @@ export const verifyPayment = async (req, res) => {
             from: process.env.SENDER_EMAIL,
             to: existingBooking.user.email,
             subject: `Payment Successful - ${existingBooking.hotel.name}`,
-            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                                <h2 style="color: #4CAF50;">Payment Received! 🎉</h2>
+            html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #4CAF50; text-align: center;">Payment Successful! 🎉</h2>
                                 <p>Hi ${existingBooking.user.username},</p>
-                                <p>We received your payment of <b>₹${existingBooking.totalPrice}</b> for <b>${existingBooking.hotel.name}</b>.</p>
-                                <p>Your booking is fully confirmed!</p>
+                                <p>We have successfully received your payment. Your booking at <b>${existingBooking.hotel.name}</b> is now fully confirmed!</p>
+                                
+                                <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                  <h3 style="margin-top: 0; color: #2e7d32; border-bottom: 1px solid #a5d6a7; padding-bottom: 5px;">Booking & Payment Details</h3>
+                                  <ul style="list-style: none; padding: 0; line-height: 1.6;">
+                                    <li><b>Hotel:</b> ${existingBooking.hotel.name}</li>
+                                    <li><b>Address:</b> ${existingBooking.hotel.address}, ${existingBooking.hotel.city}</li>
+                                    <li><b>Room Type:</b> ${existingBooking.room.roomType}</li>
+                                    <li><b>Check-In:</b> ${new Date(existingBooking.checkInDate).toDateString()}</li>
+                                    <li><b>Check-Out:</b> ${new Date(existingBooking.checkOutDate).toDateString()}</li>
+                                    <li><b>Guests:</b> ${existingBooking.guests}</li>
+                                    <li><b>Amount Paid:</b> ₹${existingBooking.totalPrice}</li>
+                                    <li><b>Transaction ID:</b> ${session.payment_intent}</li>
+                                  </ul>
+                                </div>
+
+                                <p>You're all set! Just present your ID at the hotel reception upon arrival.</p>
+                                <p>We hope you have a wonderful stay!<br><b>QuickStay Team</b></p>
                             </div>`,
           });
           console.log(" Success Email sent to:", existingBooking.user.email);
@@ -272,13 +310,27 @@ export const cancelBooking = async (req, res) => {
           from: process.env.SENDER_EMAIL,
           to: booking.user.email,
           subject: `Booking Cancelled - ${booking.hotel.name}`,
-          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                          <h2 style="color: #F44336;">Booking Cancelled</h2>
+          html: `<div style="font-family: Arial; padding: 20px; border: 1px solid #ddd; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                          <h2 style="color: #F44336; text-align: center;">Booking Cancelled</h2>
                           <p>Hi ${booking.user.username},</p>
-                          <p>Your booking at <b>${booking.hotel.name}</b> has been cancelled.</p>
-                          <p style="background-color: #f9f9f9; padding: 10px; border-left: 4px solid #F44336;">
-                              <b>Refund Status:</b> ${refundStatusMsg}
-                          </p>
+                          <p>As requested, your booking at <b>${booking.hotel.name}</b> has been officially cancelled.</p>
+                          
+                          <div style="background-color: #ffebee; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #c62828; border-bottom: 1px solid #ef9a9a; padding-bottom: 5px;">Cancelled Reservation Details</h3>
+                            <ul style="list-style: none; padding: 0; line-height: 1.6;">
+                              <li><b>Hotel:</b> ${booking.hotel.name}</li>
+                              <li><b>Room Type:</b> ${booking.room.roomType}</li>
+                              <li><b>Dates:</b> ${new Date(booking.checkInDate).toDateString()} - ${new Date(booking.checkOutDate).toDateString()}</li>
+                            </ul>
+                          </div>
+
+                          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F44336;">
+                              <h3 style="margin-top: 0; color: #333;">Refund Status</h3>
+                              <p>${refundStatusMsg}</p>
+                          </div>
+
+                          <p>If you cancelled this by mistake or want to book another stay, visit our website to explore available rooms.</p>
+                          <p>Best regards,<br><b>QuickStay Team</b></p>
                       </div>`,
         });
         console.log(" Cancel Email sent to:", booking.user.email);
