@@ -59,7 +59,7 @@ const HotelReg = () => {
       }
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${city}&format=json&featuretype=city&limit=5`,
+          `https://nominatim.openstreetmap.org/search?q=${city}&format=json&limit=5`,
         );
         const data = await response.json();
         const uniqueCities = data.map((place) =>

@@ -30,7 +30,7 @@ function Hero() {
       setIsSearching(true);
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&featuretype=city&limit=5`,
+          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=5`,
         );
         const data = await response.json();
         const uniqueCities = data.map((place) => {
@@ -121,7 +121,7 @@ function Hero() {
               required
               autoComplete="off"
             />
-            {showDropdown && suggestions.length > 0 && (
+            {showDropdown && (suggestions.length > 0 || isSearching) && (
               <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
                 {isSearching ? (
                   <li className="px-4 py-3 text-sm text-gray-500">
