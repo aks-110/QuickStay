@@ -60,20 +60,20 @@ The system relies on a **Client-Server Architecture** utilizing a RESTful API.
 
 ```mermaid
 graph TD
-    Client[Client Browser (React/Vite)]
-    Server[Backend Express API Server]
-    DB[(MongoDB Atlas)]
-    ClerkAuth[Clerk Identity Provider]
-    CloudinaryStorage[Cloudinary Image CDN]
-    StripeGateway[Stripe Payment Processing]
+    Client["Client Browser (React/Vite)"]
+    Server["Backend Express API Server"]
+    DB[("MongoDB Atlas")]
+    ClerkAuth["Clerk Identity Provider"]
+    CloudinaryStorage["Cloudinary Image CDN"]
+    StripeGateway["Stripe Payment Processing"]
 
-    Client -->|RESTful HTTP / JSON| Server
-    Client -->|Login/OAuth| ClerkAuth
-    Server -->|Mongoose Queries| DB
-    Server -->|Sync Webhooks (Svix)| ClerkAuth
-    Server -->|Upload multipart/form-data| CloudinaryStorage
-    Server -->|Create Sessions| StripeGateway
-    StripeGateway -->|Async Webhooks| Server
+    Client -->|"RESTful HTTP / JSON"| Server
+    Client -->|"Login/OAuth"| ClerkAuth
+    Server -->|"Mongoose Queries"| DB
+    Server -->|"Sync Webhooks (Svix)"| ClerkAuth
+    Server -->|"Upload multipart/form-data"| CloudinaryStorage
+    Server -->|"Create Sessions"| StripeGateway
+    StripeGateway -->|"Async Webhooks"| Server
 ```
 
 ### 🧩 Frontend Low-Level Design (LLD)
@@ -82,23 +82,23 @@ The React frontend uses **Context API** (`AppContext.jsx`) for global state mana
 ```mermaid
 graph LR
     subgraph Context & Providers
-    App[App.jsx] --> AppContext[AppContext Provider]
-    AppContext --> ClerkProv[ClerkProvider]
+    App["App.jsx"] --> AppContext["AppContext Provider"]
+    AppContext --> ClerkProv["ClerkProvider"]
     end
 
     subgraph Pages
-    ClerkProv --> Home[Home.jsx]
-    ClerkProv --> AllRooms[AllRooms.jsx]
-    ClerkProv --> RoomDetails[RoomDetails.jsx]
-    ClerkProv --> MyBookings[MyBookings.jsx]
-    ClerkProv --> OwnerDash[hotelOwner / Dashboard]
+    ClerkProv --> Home["Home.jsx"]
+    ClerkProv --> AllRooms["AllRooms.jsx"]
+    ClerkProv --> RoomDetails["RoomDetails.jsx"]
+    ClerkProv --> MyBookings["MyBookings.jsx"]
+    ClerkProv --> OwnerDash["hotelOwner / Dashboard"]
     end
 
     subgraph Reusable Components
-    Home --> Hero[Hero.jsx]
-    Home --> Featured[FeaturedDestination.jsx]
-    AllRooms --> HotelCard[HotelCard.jsx]
-    RoomDetails --> Loader[Loader.jsx]
+    Home --> Hero["Hero.jsx"]
+    Home --> Featured["FeaturedDestination.jsx"]
+    AllRooms --> HotelCard["HotelCard.jsx"]
+    RoomDetails --> Loader["Loader.jsx"]
     end
 ```
 
@@ -107,16 +107,16 @@ The Express backend follows a strict **Route -> Middleware -> Controller -> Mode
 
 ```mermaid
 graph TD
-    Request[Incoming HTTP Request] --> Router[Express Router]
+    Request["Incoming HTTP Request"] --> Router["Express Router"]
     
-    Router --> AuthMid[authMiddleware (Clerk JWT)]
-    Router --> UploadMid[uploadMiddleware (Multer)]
+    Router --> AuthMid["authMiddleware (Clerk JWT)"]
+    Router --> UploadMid["uploadMiddleware (Multer)"]
     
-    AuthMid --> Controller[Controller Logic]
+    AuthMid --> Controller["Controller Logic"]
     UploadMid --> Controller
     
-    Controller --> Model[Mongoose Models]
-    Model --> MongoDB[(MongoDB)]
+    Controller --> Model["Mongoose Models"]
+    Model --> MongoDB[("MongoDB")]
 ```
 
 ---
@@ -149,24 +149,24 @@ erDiagram
         String name
         String address
         String contact
-        ObjectId owner FK "Ref: User"
+        ObjectId owner FK "Ref User"
         String city
         Date createdAt
     }
     ROOM {
         ObjectId _id PK
-        ObjectId hotel FK "Ref: Hotel"
-        String roomType "e.g., Suite, Standard"
+        ObjectId hotel FK "Ref Hotel"
+        String roomType "Suite, Standard"
         Number pricePerNight
-        Array amenities "[WiFi, AC, Pool]"
-        Array images "[Cloudinary URLs]"
-        Boolean isAvailable "Default: true"
+        Array amenities "WiFi, AC, Pool"
+        Array images "Cloudinary URLs"
+        Boolean isAvailable "Default true"
     }
     BOOKING {
         ObjectId _id PK
-        ObjectId user FK "Ref: User"
-        ObjectId room FK "Ref: Room"
-        ObjectId hotel FK "Ref: Hotel"
+        ObjectId user FK "Ref User"
+        ObjectId room FK "Ref Room"
+        ObjectId hotel FK "Ref Hotel"
         Date checkInDate
         Date checkOutDate
         Number totalPrice
@@ -178,8 +178,8 @@ erDiagram
     }
     REVIEW {
         ObjectId _id PK
-        ObjectId user FK "Ref: User"
-        ObjectId hotel FK "Ref: Hotel"
+        ObjectId user FK "Ref User"
+        ObjectId hotel FK "Ref Hotel"
         Number rating "1-5"
         String comment
     }
@@ -195,16 +195,16 @@ User data is managed by Clerk and synchronized to our MongoDB database automatic
 sequenceDiagram
     actor User
     participant Clerk
-    participant API Webhook (/api/clerk)
+    participant API_Webhook as API Webhook (/api/clerk)
     participant Svix
     participant MongoDB
     
     User->>Clerk: Signs up / Logs in
-    Clerk->>API Webhook: POST user.created / user.updated
-    API Webhook->>Svix: Verify Webhook Signature
-    Svix-->>API Webhook: Signature Valid
-    API Webhook->>MongoDB: Upsert User Document
-    MongoDB-->>API Webhook: Success
+    Clerk->>API_Webhook: POST user.created / user.updated
+    API_Webhook->>Svix: Verify Webhook Signature
+    Svix-->>API_Webhook: Signature Valid
+    API_Webhook->>MongoDB: Upsert User Document
+    MongoDB-->>API_Webhook: Success
 ```
 
 ### 🖼️ 5.2 Room Creation & Media Upload Flow
@@ -212,16 +212,16 @@ sequenceDiagram
 sequenceDiagram
     actor Owner
     participant Frontend
-    participant Multer (Middleware)
+    participant Multer as Multer (Middleware)
     participant Cloudinary
     participant MongoDB
     
     Owner->>Frontend: Submit Room Data & Image Files
-    Frontend->>Multer (Middleware): POST /api/rooms (multipart/form-data)
-    Multer (Middleware)->>Multer (Middleware): Buffer files in memory
-    Multer (Middleware)->>Cloudinary: Upload buffers sequentially
-    Cloudinary-->>Multer (Middleware): Return Secure Image URLs
-    Multer (Middleware)->>MongoDB: Create Room document with Image URLs
+    Frontend->>Multer: POST /api/rooms (multipart/form-data)
+    Multer->>Multer: Buffer files in memory
+    Multer->>Cloudinary: Upload buffers sequentially
+    Cloudinary-->>Multer: Return Secure Image URLs
+    Multer->>MongoDB: Create Room document with Image URLs
     MongoDB-->>Frontend: 201 Created Room Object
 ```
 
@@ -231,20 +231,20 @@ sequenceDiagram
     actor User
     participant Frontend
     participant Backend
-    participant Stripe API
+    participant Stripe_API as Stripe API
     participant DB
     
     User->>Frontend: Clicks "Pay & Book"
     Frontend->>Backend: POST /api/bookings
-    Backend->>DB: Save Booking (status: pending)
-    Backend->>Stripe API: Create Checkout Session (metadata: bookingId)
-    Stripe API-->>Backend: Session URL
+    Backend->>DB: Save Booking (status pending)
+    Backend->>Stripe_API: Create Checkout Session (metadata bookingId)
+    Stripe_API-->>Backend: Session URL
     Backend-->>Frontend: Return Session URL
     Frontend-->>User: Redirect to Stripe UI
-    User->>Stripe API: Enters Credit Card details
-    Stripe API->>Backend: Webhook: checkout.session.completed
-    Backend->>DB: Update Booking (status: confirmed, isPaid: true)
-    Stripe API-->>User: Redirect to Frontend Success URL
+    User->>Stripe_API: Enters Credit Card details
+    Stripe_API->>Backend: Webhook checkout.session.completed
+    Backend->>DB: Update Booking (status confirmed, isPaid true)
+    Stripe_API-->>User: Redirect to Frontend Success URL
 ```
 
 ---
